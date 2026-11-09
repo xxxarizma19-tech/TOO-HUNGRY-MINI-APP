@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101113">
+  <meta name="description" content="TOO HUNGRY — sauce-soaked 2D beat 'em up campaign by XARIZMA19.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./assets/icons/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./assets/icons/app-icon-192.png">
+  <title>TOO HUNGRY</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 18%,#252123 0,#111113 54%,#09090a 100%); color: #f5f2ec; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+    .frame { width: min(100vw, 1220px); padding: 18px; }
+    .topline { display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 2px 2px 13px; }
+    .brand { display:flex; align-items:center; gap:9px; font-size:12px; letter-spacing:.2em; font-weight:900; color:#f3ece4; }
+    .brand-mark { width:9px; height:13px; display:inline-block; background:#ed4038; border-radius:90% 8% 80% 60%; transform:rotate(35deg); box-shadow:0 0 15px #ff4d42a8; }
+    .audio-toggle { display:grid; place-items:center; width:34px; height:34px; border:1px solid #6c5146; border-radius:50%; background:#171416; color:#f4c08d; font-size:17px; line-height:1; transition:background .18s,transform .18s; }
+    .fullscreen-toggle { display:none; }
+    .fullscreen-toggle[aria-pressed="true"] { border-color:#d89b63; color:#ffe0ad; box-shadow:0 0 15px #ffbf6830; }
+    .audio-toggle:hover { background:#38201e; transform:translateY(-1px); }
+    .audio-controls { display:flex; align-items:center; gap:7px; }
+    .audio-toggle.sfx-toggle { width:38px; border-radius:14px; font-size:9px; letter-spacing:.04em; font-weight:900; }
+    .subtitle { font-size:10px; color:#a19a97; letter-spacing:.18em; text-transform:uppercase; }
+    .stage { position:relative; overflow:hidden; border:1px solid #554143; border-radius:10px; background:#181719; box-shadow:0 26px 100px #000c,0 0 55px #e23b3010; }
+    canvas { display:block; width:100%; aspect-ratio:16 / 9; touch-action:manipulation; touch-action:pinch-zoom; }
+    .overlay { position:absolute; inset:0; display:grid; place-items:center; padding:20px; background:radial-gradient(ellipse at 50% 45%,#1611128a 0,#09090be8 74%),linear-gradient(110deg,#09090bf2,#181214b8); text-align:center; animation:overlay-arrive .24s ease-out both; }
+    .panel { position:relative; width:min(540px,100%); padding:31px 32px 27px; border:1px solid #7b3a38; border-radius:5px; background:linear-gradient(145deg,#201b1bfa,#111113f5 74%); box-shadow:0 24px 80px #000c,0 0 38px #f0442b15; animation:panel-arrive .34s cubic-bezier(.2,.8,.2,1) both; }
+    .panel::before,.panel::after { content:""; position:absolute; top:12px; bottom:12px; width:2px; background:linear-gradient(transparent,#ef443b,transparent); opacity:.78; }
+    .panel::before { left:10px; }.panel::after { right:10px; }
+    .sauce-icon { width:53px; height:64px; display:block; margin:0 auto 12px; filter:drop-shadow(0 0 17px #ff3d33a8); transform-origin:50% 80%; animation:sauce-idle 3.2s ease-in-out infinite; }
+    @keyframes overlay-arrive { from { opacity:0; } to { opacity:1; } }
+    @keyframes panel-arrive { from { opacity:0; transform:translateY(12px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes sauce-idle { 0%,100% { transform:translateY(0) rotate(-2deg); } 50% { transform:translateY(-5px) rotate(2deg); } }
+    .eyebrow { color:#ff6457; font-size:10px; letter-spacing:.25em; font-weight:900; }
+    h1 { margin:11px 0 12px; font-size:clamp(29px,5.7vw,54px); line-height:.93; letter-spacing:-.06em; font-weight:950; text-transform:uppercase; text-shadow:0 3px 0 #5a1718,0 0 30px #ff302a26; }
+    .desc { max-width:410px; margin:0 auto 23px; color:#c8beb8; font-size:14px; line-height:1.65; }
+    button { font:inherit; color:inherit; cursor:pointer; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    button:focus-visible, a:focus-visible { outline:2px solid #ffd08a; outline-offset:3px; }
+    .primary { border:1px solid #ff756a; border-radius:3px; padding:14px 25px; background:linear-gradient(100deg,#c92e2e,#ef4b3f 60%,#b82025); font-weight:900; font-size:12px; letter-spacing:.14em; box-shadow:0 7px 28px #e841354c,inset 0 1px #ffffff30; transition:transform .16s,filter .16s; }
+    .primary:hover { filter:brightness(1.16); transform:translateY(-2px); }
+    .secondary-action { display:block; min-height:44px; margin:9px auto 0; padding:9px 16px; border:1px solid #654b43; border-radius:3px; background:linear-gradient(110deg,#201a1a,#151416); color:#d8c2b2; font-size:9px; font-weight:850; letter-spacing:.12em; }
+    .secondary-action:hover { border-color:#bd775c; color:#fff0df; background:#241a1a; }
+    .secondary-action[hidden] { display:none; }
+    .share-button { display:block; margin:0 auto 10px; padding:10px 17px; border:1px solid #76564b; border-radius:3px; background:linear-gradient(110deg,#241a19,#171416); color:#f0d2b3; font-size:10px; font-weight:900; letter-spacing:.12em; }
+    .share-button:hover { border-color:#dfa778; background:#2a1e1b; }
+    .share-button[hidden] { display:none; }
+    .run-grade { display:flex; align-items:center; gap:10px; width:max-content; max-width:100%; margin:-8px auto 14px; padding:8px 13px; border:1px solid #76533d; border-radius:4px; background:linear-gradient(115deg,#251b18,#151416 78%); box-shadow:0 8px 24px #0006; text-align:left; animation:grade-reveal .42s cubic-bezier(.2,.8,.2,1) both; }
+    .run-grade[hidden] { display:none; }
+    .run-grade-mark { display:grid; place-items:center; width:36px; height:36px; border:1px solid #bd8b54; border-radius:50%; color:#ffcf85; font-size:20px; font-weight:950; text-shadow:0 0 14px #ffbd5b88; }
+    .run-grade-copy strong,.run-grade-copy small { display:block; }
+    .run-grade-copy strong { color:#ffe3b2; font-size:9px; letter-spacing:.15em; }
+    .run-grade-copy small { margin-top:4px; color:#b4a49a; font-size:8px; letter-spacing:.05em; }
+    .run-grade[data-rank="S"] { border-color:#d5a15d; box-shadow:0 0 26px #ffc3631d,0 8px 24px #0006; }
+    .run-grade[data-rank="S"] .run-grade-mark { border-color:#ffd27f; color:#fff0b2; animation:grade-mark .72s cubic-bezier(.2,.85,.25,1.25) both; }
+    .run-grade[data-rank="A"] .run-grade-mark { border-color:#e8a772; color:#ffc58a; }
+    .run-grade[data-rank="B"] .run-grade-mark { border-color:#e1745d; color:#ff9d7f; }
+    .run-grade[data-rank="C"] { border-color:#5f5047; }
+    .run-grade[data-rank="C"] .run-grade-mark { border-color:#756b62; color:#c8b9ae; text-shadow:none; }
+    @keyframes grade-reveal { from { opacity:0; transform:translateY(9px) scale(.96); } 72% { opacity:1; transform:translateY(-1px) scale(1.015); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes grade-mark { from { transform:scale(.45) rotate(-20deg); box-shadow:0 0 0 #ffd27f00; } 70% { transform:scale(1.18) rotate(8deg); box-shadow:0 0 22px #ffd27f80; } to { transform:scale(1) rotate(0); box-shadow:0 0 12px #ffd27f35; } }
+    .album-link { display:block; margin:0 auto 10px; text-decoration:none; }
+    .album-link[hidden] { display:none; }
+    .hint { margin-top:17px; color:#918a88; font-size:10px; line-height:1.7; letter-spacing:.025em; }
+    .save-transfer { display:flex; justify-content:center; gap:8px; margin:14px auto -4px; }
+    .save-transfer[hidden] { display:none; }
+    .save-transfer button { padding:8px 11px; border:1px solid #624743; border-radius:3px; background:#171416; color:#dcc7b8; font-size:9px; font-weight:850; letter-spacing:.08em; }
+    .save-transfer button:hover { border-color:#d77a61; background:#281b1b; }
+    .save-transfer-hint { margin:7px 0 0; color:#92837c; font-size:9px; line-height:1.45; }
+    .save-transfer-hint.is-warning { color:#ffad78; }
+    .campaign-route { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin:0 auto 17px; max-width:440px; }
+    .campaign-route[hidden] { display:none; }
+    .route-stop { --route-accent:#ff765e; position:relative; min-width:0; padding:9px 5px 8px; border:1px solid #393033; border-radius:4px; background:linear-gradient(180deg,#1b1819,#121113); color:#847d7d; text-align:left; transition:transform .16s,border-color .16s,background .16s,opacity .16s; }
+    .route-stop::before { content:""; position:absolute; top:0; left:0; right:0; height:2px; border-radius:4px 4px 0 0; background:var(--route-accent); opacity:.78; }
+    .route-stop:not(:disabled):hover { transform:translateY(-2px); border-color:#b65b4f; background:#271b1b; }
+    .route-stop:disabled { opacity:.56; cursor:not-allowed; }
+    .route-stop.is-open { border-color:var(--route-accent); color:#f2d8c1; }
+    .route-stop.is-current { box-shadow:inset 0 -2px var(--route-accent),0 0 14px color-mix(in srgb,var(--route-accent) 14%,transparent); }
+    .route-number { display:block; color:var(--route-accent); font-size:9px; letter-spacing:.13em; font-weight:950; }
+    .route-name { display:block; overflow:hidden; margin-top:5px; color:inherit; font-size:8px; line-height:1.2; font-weight:850; white-space:nowrap; text-overflow:ellipsis; }
+    .route-boss { display:block; overflow:hidden; margin-top:4px; color:#a39a96; font-size:7px; white-space:nowrap; text-overflow:ellipsis; }
+    .route-track { display:block; margin-top:7px; color:#d9a878; font-size:7px; letter-spacing:.08em; }
+    .route-state { position:absolute; top:6px; right:5px; color:#7d7774; font-size:7px; font-weight:900; }
+    .route-stop.is-open .route-state { color:#ffbc7e; }
+    .route-stop.is-done .route-state { color:#91c39b; }
+    .mobile-controls { display:none; position:absolute; inset:auto 12px 12px; justify-content:space-between; align-items:end; pointer-events:none; }
+    .handedness-toggle { display:none; min-height:24px; padding:4px 8px; border:1px solid #6c5146; border-radius:3px; background:#171416; color:#e7bd94; font-size:8px; font-weight:850; letter-spacing:.07em; white-space:nowrap; touch-action:manipulation; }
+    .game-pause { display:none; position:absolute; z-index:2; top:12px; right:12px; width:40px; height:40px; border:1px solid #fff5; border-radius:50%; background:#111012d9; color:#fff0df; font-weight:900; font-size:15px; touch-action:manipulation; }
+    .playing .game-pause { display:block; }
+    .pad, .actions { display:flex; gap:8px; pointer-events:auto; align-items:end; }
+    .pad { display:grid; grid-template-columns:repeat(3,max-content); grid-template-rows:repeat(3,max-content); }
+    .pad [data-hold="left"] { grid-column:1; grid-row:2; }
+    .pad [data-hold="right"] { grid-column:3; grid-row:2; }
+    .pad [data-hold="up"] { grid-column:2; grid-row:1; }
+    .pad [data-hold="down"] { grid-column:2; grid-row:3; }
+    .mobile-controls button { width:52px; height:52px; border:1px solid #fff5; border-radius:50%; background:#151619b8; font-weight:800; touch-action:none; user-select:none; }
+    .mobile-controls button:active { background:#e84135c9; }
+    .mobile-controls .hit { width:62px; height:62px; background:#a52b27d9; }
+    .mobile-controls .dash { border-color:#ff5149; color:#ff7268; font-size:clamp(7px,1.6vw,9px); letter-spacing:-.025em; }
+    .mobile-controls .jump { border-color:#e3b778; color:#ffd49b; }
+    .mobile-controls button[data-press="jump"]::after { opacity:.42; }
+    .mobile-controls .utility { width:46px; height:46px; font-size:clamp(7px,1.6vw,9px); letter-spacing:-.025em; }
+    .mobile-controls button[data-press] { position:relative; overflow:visible; }
+    .mobile-controls button[data-press]::after { content:""; position:absolute; inset:-4px; border-radius:50%; background:conic-gradient(from -90deg,#ffd08a var(--charge-angle,360deg),transparent 0deg); -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1px)); mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1px)); pointer-events:none; opacity:.84; }
+    .mobile-controls button.is-locked { filter:saturate(.35); opacity:.54; }
+    .mobile-controls.is-left-handed { flex-direction:row-reverse; }
+    .mobile-controls button:not(.is-ready)::after { opacity:.52; }
+    .footer { display:flex; justify-content:space-between; gap:12px; padding:10px 2px 0; color:#847d7d; font-size:10px; letter-spacing:.05em; text-transform:uppercase; }
+    .rotate-hint { display:none; position:fixed; z-index:10; left:50%; top:50%; align-items:center; gap:11px; transform:translate(-50%,-50%); padding:11px 15px; border:1px solid #bd775c; border-radius:6px; background:linear-gradient(125deg,#191416ed,#111113ed); box-shadow:0 12px 42px #000a,0 0 22px #ff73411c; pointer-events:none; }
+    .rotate-mark { display:grid; place-items:center; width:32px; height:32px; border:1px solid #ffb46c77; border-radius:50%; color:#ffc681; font-size:19px; animation:phone-turn 2.4s ease-in-out infinite; }
+    .rotate-copy strong,.rotate-copy small { display:block; }
+    .rotate-copy strong { color:#fff0dc; font-size:10px; letter-spacing:.12em; }
+    .rotate-copy small { margin-top:4px; color:#b7a59d; font-size:8px; letter-spacing:.08em; }
+    @keyframes phone-turn { 0%,15%,100% { transform:rotate(0); } 45%,75% { transform:rotate(90deg); } }
+    @media (pointer:coarse), (max-width:700px) { body { align-items:start; } .frame { width:100%; padding:4px; } .fullscreen-toggle { display:grid; } .audio-controls { gap:4px; } .handedness-toggle { display:block; } .mobile-controls { display:none; inset-inline:6px; bottom:max(8px,env(safe-area-inset-bottom)); gap:2px; } .playing .mobile-controls { display:flex; } .mobile-controls button { width:clamp(34px,8vw,48px); height:clamp(34px,8vw,48px); font-size:13px; } .mobile-controls .utility { width:clamp(30px,7vw,42px); height:clamp(30px,7vw,42px); font-size:9px; } .mobile-controls .hit { width:clamp(44px,10vw,58px); height:clamp(44px,10vw,58px); font-size:9px; } .mobile-controls .dash { width:clamp(36px,8vw,48px); height:clamp(36px,8vw,48px); } .pad,.actions { gap:3px; } .game-pause { top:5px; right:5px; width:clamp(32px,8vw,40px); height:clamp(32px,8vw,40px); } .subtitle { display:none; } .topline { padding:3px 4px 8px; } .footer { padding-bottom:env(safe-area-inset-bottom); font-size:8px; } .overlay { padding:8px; } .panel { padding:clamp(12px,4vw,24px); max-height:90dvh; overflow:auto; } .desc { font-size:clamp(11px,3vw,14px); line-height:1.4; margin-bottom:12px; } .hint { margin-top:10px; font-size:9px; } .campaign-route { gap:3px; margin-bottom:11px; } .route-stop { padding:7px 3px 6px; } .route-name { font-size:7px; } .route-boss,.route-track,.route-state { font-size:6px; } .sauce-icon { width:38px; height:46px; margin-bottom:6px; } h1 { font-size:clamp(25px,7vw,40px); } }
+    @media (pointer:coarse) and (orientation:portrait) { .playing .rotate-hint { display:flex; } }
+    @media (pointer:coarse) and (orientation:landscape) { body { align-items:center; min-height:100dvh; } .frame { width:min(100vw,calc((100dvh - 68px) * 1.7778)); padding:4px; } .topline { padding:0 2px 4px; } .footer { padding-top:4px; padding-bottom:env(safe-area-inset-bottom); } }
+    @media (prefers-reduced-motion:reduce) { .overlay,.panel,.sauce-icon,.rotate-mark,.run-grade,.run-grade-mark { animation:none; } .audio-toggle,.primary,.route-stop { transition:none; } }
+    @media (pointer:coarse), (max-width:700px) { .save-transfer { margin-top:10px; gap:5px; } .save-transfer button { padding:8px 7px; font-size:8px; } .save-transfer-hint { font-size:8px; } }
+  </style>
+</head>
+<body>
+  <main class="frame">
+    <div class="topline"><div class="brand"><i class="brand-mark"></i>XARIZMA19&nbsp; / &nbsp;TOO HUNGRY</div><div class="subtitle">SAUCE RUN&nbsp; · &nbsp;5 STAGES · 4 BOSSES</div><div class="audio-controls"><button id="sfxToggle" class="audio-toggle sfx-toggle" type="button" aria-label="Выключить звуковые эффекты" aria-pressed="true" title="Звуковые эффекты">SFX</button><button id="audioToggle" class="audio-toggle" type="button" aria-label="Выключить музыку" aria-pressed="true" title="Музыка · M">♪</button><button id="fullscreenToggle" class="audio-toggle fullscreen-toggle" type="button" aria-label="Включить полноэкранный режим" aria-pressed="false" title="Полный экран">⛶</button></div></div>
+    <section class="stage" aria-label="Игровая арена">
+      <canvas id="game" width="960" height="540" tabindex="0" aria-label="Игра Too Hungry"></canvas>
+      <p id="gameStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+      <button class="game-pause" id="pauseButton" type="button" aria-label="Пауза" title="Пауза · P / Esc">Ⅱ</button>
+      <div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="overlayTitle" aria-describedby="overlayDesc">
+        <div class="panel">
+          <svg class="sauce-icon" viewBox="0 0 64 80" aria-hidden="true"><defs><linearGradient id="sauce" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ff8470"/><stop offset=".45" stop-color="#f2463e"/><stop offset="1" stop-color="#a81925"/></linearGradient></defs><path d="M32 3C25 16 8 34 8 49a24 24 0 0 0 48 0C56 34 39 16 32 3Z" fill="url(#sauce)" stroke="#ff8c7d" stroke-width="2"/><ellipse cx="24" cy="34" rx="5" ry="9" fill="#fff2e8"/><ellipse cx="40" cy="34" rx="5" ry="9" fill="#fff2e8"/><circle cx="25" cy="36" r="2" fill="#171315"/><circle cx="39" cy="36" r="2" fill="#171315"/><path d="M24 48q8 8 16 0" fill="none" stroke="#741a20" stroke-width="3" stroke-linecap="round"/><path d="M18 20q7-8 14-10" fill="none" stroke="#ffd0b7" stroke-width="3" stroke-linecap="round" opacity=".8"/></svg>
+          <div class="eyebrow">XARIZMA19&nbsp; / &nbsp;A SAUCE-SOAKED RUN</div>
+          <h1 id="overlayTitle">TOO HUNGRY</h1>
+          <p id="overlayDesc" class="desc">Шеф XARIZMA19 хотел добавить в блюдо соус TOO HUNGRY. Капля промахнулась — теперь ей самой предстоит пройти четыре кухни и добраться до главного бургера.</p>
+          <div id="runGradeBadge" class="run-grade" role="status" aria-live="polite" aria-atomic="true" aria-label="Ранг прохождения" hidden><span id="runGradeMark" class="run-grade-mark">S</span><span class="run-grade-copy"><strong id="runGradeTitle">XARIZMA19 · ЛЕГЕНДА</strong><small id="runGradeDetails"></small></span></div>
+          <div class="eyebrow" style="margin:-5px 0 8px;font-size:8px;letter-spacing:.17em">ПУТЬ К БЛЮДУ · ЭТАПЫ / БОССЫ / ТРЕКИ</div>
+          <div id="campaignRoute" class="campaign-route" aria-label="Карта кампании"></div>
+          <a id="albumButton" class="primary album-link" href="https://band.link/2wXiC" target="_blank" rel="noopener" hidden>СЛУШАТЬ АЛЬБОМ</a>
+          <button id="shareRunButton" class="share-button" type="button" hidden>ПОДЕЛИТЬСЯ ЗАБЕГОМ</button>
+          <button id="startButton" class="primary">НАЧАТЬ ЗАБЕГ</button>
+          <button id="returnToTitleButton" class="secondary-action" type="button" hidden>В МЕНЮ ЭТАПОВ</button>
+          <div id="saveTransfer" class="save-transfer" hidden><button id="exportSaveButton" type="button">СКАЧАТЬ СОХРАНЕНИЕ</button><button id="importSaveButton" type="button">ЗАГРУЗИТЬ ФАЙЛ</button><input id="saveFileInput" type="file" accept="application/json,.json" hidden></div>
+          <p id="saveTransferHint" class="save-transfer-hint" hidden>Перенеси прохождение между Telegram и браузером через файл сохранения.</p>
+          <div class="hint" id="controlHint">4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · M (Ь) — музыка · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст</div>
+        </div>
+      </div>
+      <div class="mobile-controls" id="mobileControls" role="group" aria-label="Сенсорное управление">
+        <div class="pad" role="group" aria-label="Движение по арене"><button data-hold="left" aria-label="Влево">←</button><button data-hold="right" aria-label="Вправо">→</button><button data-hold="up" aria-label="Вверх по арене">↑</button><button data-hold="down" aria-label="Вниз по арене">↓</button></div>
+        <div class="actions" role="group" aria-label="Атаки и способности"><button class="jump" data-press="jump" aria-label="Прыжок">↑</button><button class="utility" data-press="whip" aria-label="Хлыст">ХЛЫСТ</button><button class="utility" data-press="heavy" aria-label="Тяжёлый удар">ТЯЖ</button><button class="hit" data-press="attack" aria-label="Удар. Удерживайте для серии ударов" title="Удерживай для серии ударов">УДАР</button><button class="dash" data-press="dash" aria-label="Рывок">РЫВОК</button></div>
+      </div>
+    </section>
+    <div class="footer"><span>5 этапов · 4 босса · прогресс сохраняется в браузере</span><button id="handednessToggle" class="handedness-toggle" type="button" aria-pressed="false" aria-label="Атаки справа, движение слева">АТАКА СПРАВА</button><span>XARIZMA19 · ORIGINAL ALBUM</span></div>
+  </main>
+  <div class="rotate-hint" role="status" aria-live="polite"><span class="rotate-mark" aria-hidden="true">↻</span><span class="rotate-copy"><strong>ПОВЕРНИ ТЕЛЕФОН</strong><small>АРЕНА ШИРЕ В АЛЬБОМНОМ РЕЖИМЕ</small></span></div>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="game.js"></script>
+<script>
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>
