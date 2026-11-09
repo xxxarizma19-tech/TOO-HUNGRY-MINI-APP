@@ -1484,9 +1484,9 @@
     ctx.restore();
   }
 
-  function drawSauceDrop(x, y, size) {
+  function drawSauceDrop(x, y, size, gold = false) {
     const gradient = ctx.createLinearGradient(x-size, y-size, x+size, y+size);
-    gradient.addColorStop(0, '#ff9b72'); gradient.addColorStop(0.45, '#f33b32'); gradient.addColorStop(1, '#99131e');
+    gradient.addColorStop(0, gold ? '#fff0b3' : '#ff9b72'); gradient.addColorStop(0.45, gold ? '#ffc65b' : '#f33b32'); gradient.addColorStop(1, gold ? '#a95b24' : '#99131e');
     ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(x, y-size*1.55);
     ctx.bezierCurveTo(x+size*0.55, y-size*0.65, x+size, y-size*0.15, x+size*0.88, y+size*0.48);
     ctx.bezierCurveTo(x+size*0.72, y+size*1.25, x-size*0.75, y+size*1.25, x-size*0.9, y+size*0.48);
@@ -2230,6 +2230,16 @@
   function updateDrops(dt) {
     for (const drop of drops) {
       drop.life -= dt;
+      const pullX = player.x - drop.x;
+      const pullY = player.y - 24 - drop.y;
+      const distance = Math.hypot(pullX, pullY);
+      drop.magnetized = player.hp < player.maxHp && distance < 180 && Math.abs(pullY) < 105;
+      if (drop.magnetized && distance > 0.01) {
+        const speed = 220 + (180 - Math.min(distance, 180)) * 0.75;
+        const step = Math.min(distance, speed * dt);
+        drop.x += pullX / distance * step;
+        drop.y += pullY / distance * step;
+      }
       if (Math.abs(player.x - drop.x) < 32 && Math.abs(player.y - drop.y) < 50) {
         const restored = Math.min(drop.amount, player.maxHp - player.hp);
         player.hp += restored;
@@ -2956,18 +2966,29 @@
   }
 
   function drawDrop(drop) {
-    const pulse = 0.86 + Math.sin(time * 8 + drop.x) * 0.14;
+    const pulse = prefersReducedMotion ? 1 : 0.86 + Math.sin(time * 8 + drop.x) * 0.14;
     ctx.save();
     ctx.globalAlpha = Math.min(1, drop.life) * pulse;
+    if (drop.magnetized && !prefersReducedMotion) {
+      ctx.save();
+      ctx.globalAlpha *= 0.42;
+      ctx.strokeStyle = drop.elite ? '#ffd17b' : '#ff9b72';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([2, 5]);
+      ctx.lineDashOffset = -time * 12;
+      ctx.beginPath(); ctx.moveTo(drop.x, drop.y); ctx.lineTo(player.x, player.y - 24); ctx.stroke();
+      ctx.restore();
+    }
     if (drop.elite) {
       ctx.strokeStyle = '#ffd17b'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.ellipse(drop.x, drop.y, 14 + Math.sin(time * 7) * 2, 17 + Math.sin(time * 7) * 2, 0, 0, Math.PI * 2); ctx.stroke();
+      const ring = prefersReducedMotion ? 14 : 14 + Math.sin(time * 7) * 2;
+      ctx.beginPath(); ctx.ellipse(drop.x, drop.y, ring, ring + 3, 0, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.fillStyle = drop.elite ? '#ffc65b' : '#ff433b';
     ctx.shadowColor = drop.elite ? '#ffc65b' : '#ff433b'; ctx.shadowBlur = drop.elite ? 16 : 8;
-    ctx.beginPath(); ctx.arc(drop.x, drop.y, (drop.elite ? 10 : 8) + Math.sin(time * 8) * 1.5, 0, Math.PI * 2); ctx.fill();
+    drawSauceDrop(drop.x, drop.y, drop.elite ? 8 : 7, drop.elite);
     ctx.shadowBlur = 0;
-    text('+', drop.x, drop.y + 3, 8, '#fff2d5', 'center', 950);
+    text('+', drop.x, drop.y + 5, 8, '#fff2d5', 'center', 950);
     ctx.restore();
   }
 
