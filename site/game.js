@@ -1071,6 +1071,7 @@
         particle.x += particle.vx * dt;
         particle.y += particle.vy * dt;
         particle.vy += 350 * dt;
+        particle.rotation += particle.spin * dt;
       }
       particles = particles.filter(particle => particle.life > 0);
       damageNumbers = damageNumbers.filter(item => (item.life -= dt) > 0);
@@ -2223,6 +2224,7 @@
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
       particle.vy += 350 * dt;
+      particle.rotation += particle.spin * dt;
     }
     particles = particles.filter(particle => particle.life > 0);
   }
@@ -2340,7 +2342,27 @@
   }
 
   function burst(x, y, color, count) {
-    for (let i = 0; i < count; i++) particles.push({ x, y, vx: (Math.random() - 0.5) * 210, vy: -Math.random() * 190, life: 0.24 + Math.random() * 0.42, color, size: 3 + Math.random() * 5 });
+    const red = Number.parseInt(color.slice(1, 3), 16) || 0;
+    const green = Number.parseInt(color.slice(3, 5), 16) || 0;
+    const blue = Number.parseInt(color.slice(5, 7), 16) || 0;
+    const sauce = red > green * 1.35 && red > blue * 1.35;
+    const gold = red > 190 && green > 125 && blue < 155;
+    const amount = prefersReducedMotion ? Math.max(2, Math.ceil(count * 0.35)) : count;
+    for (let i = 0; i < amount; i++) {
+      const shape = gold ? (i % 3 === 0 ? 'shard' : 'spark') : sauce ? (i % 3 === 0 ? 'drop' : 'spark') : (i % 4 === 0 ? 'shard' : 'spark');
+      const motionScale = prefersReducedMotion ? 0.55 : 1;
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 210 * motionScale,
+        vy: -Math.random() * 190 * motionScale,
+        life: (0.24 + Math.random() * 0.42) * motionScale,
+        color,
+        size: (3 + Math.random() * (gold ? 6 : 5)) * (prefersReducedMotion ? 0.8 : 1),
+        shape,
+        rotation: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * (gold ? 8 : 5) * motionScale
+      });
+    }
   }
 
   function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
@@ -2996,7 +3018,34 @@
     for (const particle of particles) {
       ctx.globalAlpha = Math.max(0, Math.min(1, particle.life * 2));
       ctx.fillStyle = particle.color;
-      ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size * Math.max(0.2, particle.life), 0, Math.PI * 2); ctx.fill();
+      const size = particle.size * Math.max(0.2, particle.life);
+      ctx.save();
+      ctx.translate(particle.x, particle.y);
+      ctx.rotate(particle.rotation);
+      ctx.beginPath();
+      if (particle.shape === 'drop') {
+        ctx.moveTo(0, -size * 1.25);
+        ctx.quadraticCurveTo(size * 0.95, -size * 0.05, size * 0.66, size * 0.72);
+        ctx.quadraticCurveTo(0, size * 1.28, -size * 0.66, size * 0.72);
+        ctx.quadraticCurveTo(-size * 0.95, -size * 0.05, 0, -size * 1.25);
+      } else if (particle.shape === 'shard') {
+        ctx.moveTo(0, -size * 1.45);
+        ctx.lineTo(size * 0.52, -size * 0.08);
+        ctx.lineTo(size * 0.18, size * 1.15);
+        ctx.lineTo(-size * 0.48, size * 0.2);
+      } else {
+        ctx.moveTo(0, -size * 1.25);
+        ctx.lineTo(size * 0.34, -size * 0.2);
+        ctx.lineTo(size * 1.18, 0);
+        ctx.lineTo(size * 0.34, size * 0.2);
+        ctx.lineTo(0, size * 1.25);
+        ctx.lineTo(-size * 0.34, size * 0.2);
+        ctx.lineTo(-size * 1.18, 0);
+        ctx.lineTo(-size * 0.34, -size * 0.2);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   }
