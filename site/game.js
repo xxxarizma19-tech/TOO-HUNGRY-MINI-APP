@@ -1482,7 +1482,8 @@
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }
     }
-    if (overlay.style.display === 'grid' && !event.repeat && ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'home', 'end'].includes(key)) {
+    const editingTarget = event.target instanceof Element && event.target.closest('input,select,textarea,[contenteditable="true"]');
+    if (overlay.style.display === 'grid' && !editingTarget && !event.repeat && ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'home', 'end'].includes(key)) {
       const focusable = [...overlay.querySelectorAll('a[href],button:not(:disabled)')].filter(element => !element.hidden && element.getClientRects().length > 0);
       if (focusable.length) {
         const currentIndex = focusable.indexOf(document.activeElement);
@@ -1499,6 +1500,8 @@
     }
     if (cutscene) { if (['escape', 'enter', ' '].includes(key)) skipCutscene(); return; }
     if (running && (key === 'escape' || key === 'p')) { event.preventDefault(); pauseGame(); return; }
+    const interactiveTarget = event.target instanceof Element ? event.target.closest('button,a[href],input,select,textarea,summary,[contenteditable="true"]') : null;
+    if (interactiveTarget && (interactiveTarget.matches('input,select,textarea,[contenteditable="true"]') || ['enter', ' '].includes(key))) return;
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) event.preventDefault();
     if (key === 'm' && !event.repeat) toggleMusic();
     if ((key === 'j' || key === 'z') && !event.repeat) attack();
