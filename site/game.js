@@ -2235,7 +2235,7 @@
       const distance = Math.hypot(pullX, pullY);
       drop.magnetized = player.hp < player.maxHp && distance < 180 && Math.abs(pullY) < 105;
       if (drop.magnetized && distance > 0.01) {
-        const speed = 220 + (180 - Math.min(distance, 180)) * 0.75;
+        const speed = 300 + (180 - Math.min(distance, 180)) * 0.55;
         const step = Math.min(distance, speed * dt);
         drop.x += pullX / distance * step;
         drop.y += pullY / distance * step;
