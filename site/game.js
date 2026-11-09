@@ -12,6 +12,10 @@
   const handednessToggle = document.querySelector('#handednessToggle');
   const audioButton = document.querySelector('#audioToggle');
   const sfxButton = document.querySelector('#sfxToggle');
+  const musicVolumeControl = document.querySelector('#musicVolume');
+  const sfxVolumeControl = document.querySelector('#sfxVolume');
+  const musicVolumeValue = document.querySelector('#musicVolumeValue');
+  const sfxVolumeValue = document.querySelector('#sfxVolumeValue');
   const fullscreenButton = document.querySelector('#fullscreenToggle');
   const albumButton = document.querySelector('#albumButton');
   const shareRunButton = document.querySelector('#shareRunButton');
@@ -198,7 +202,8 @@
   let menuGamepadRepeatAt = 0;
   const music = new Audio();
   music.loop = true;
-  music.volume = 0.38;
+  const MUSIC_MAX_VOLUME = 0.38;
+  music.volume = MUSIC_MAX_VOLUME;
   let audioContext = null;
   let sfxOutput = null;
   const noiseBufferCache = new Map();
@@ -252,7 +257,7 @@
   }
 
   function loadProgress() {
-    const fresh = { maxLevel: 0, shards: 0, dash: false, whip: false, heavy: false, introSeen: false, secretSeen: false, musicEnabled: true, sfxEnabled: true, checkpoint: null, runSeconds: 0, runKills: 0, runDodges: 0, runPeakStreak: 0, runStartLevel: 0, currentLevel: 0, bestRunSeconds: null, runFinished: false, lastRunIsRecord: false };
+    const fresh = { maxLevel: 0, shards: 0, dash: false, whip: false, heavy: false, introSeen: false, secretSeen: false, musicEnabled: true, sfxEnabled: true, musicVolume: 100, sfxVolume: 100, checkpoint: null, runSeconds: 0, runKills: 0, runDodges: 0, runPeakStreak: 0, runStartLevel: 0, currentLevel: 0, bestRunSeconds: null, runFinished: false, lastRunIsRecord: false };
     try {
       const parseSaveObject = raw => {
         if (typeof raw !== 'string' || !raw.trim()) return null;
@@ -284,6 +289,8 @@
         secretSeen,
         musicEnabled: stored.musicEnabled !== false,
         sfxEnabled: stored.sfxEnabled !== false,
+        musicVolume: integer(stored.musicVolume, 0, 100) ? stored.musicVolume : 100,
+        sfxVolume: integer(stored.sfxVolume, 0, 100) ? stored.sfxVolume : 100,
         checkpoint: normalizeCheckpoint(stored.checkpoint, maxLevel, secretSeen),
         runSeconds: numeric(stored.runSeconds) ? stored.runSeconds : 0,
         runKills: integer(stored.runKills, 0, 1e7) ? stored.runKills : 0,
@@ -439,6 +446,7 @@
 
   function updateMusic(trackNumber) {
     music.pause();
+    music.volume = MUSIC_MAX_VOLUME * (gameState.musicVolume ?? 100) / 100;
     musicState = `${levels[levelIndex].trackTitle} · TRACK ${String(trackNumber).padStart(2, '0')}`;
     if (!musicEnabled) {
       music.removeAttribute('src');
@@ -482,6 +490,28 @@
     saveProgress();
   }
 
+  function syncMixerControls() {
+    const musicVolume = gameState.musicVolume ?? 100;
+    const sfxVolume = gameState.sfxVolume ?? 100;
+    if (musicVolumeControl) musicVolumeControl.value = String(musicVolume);
+    if (sfxVolumeControl) sfxVolumeControl.value = String(sfxVolume);
+    if (musicVolumeValue) musicVolumeValue.value = `${musicVolume}%`;
+    if (sfxVolumeValue) sfxVolumeValue.value = `${sfxVolume}%`;
+    music.volume = MUSIC_MAX_VOLUME * musicVolume / 100;
+    if (sfxOutput && audioContext) sfxOutput.gain.setTargetAtTime(0.9 * sfxVolume / 100, audioContext.currentTime, 0.025);
+  }
+
+  function setMixerVolume(kind, value, persist = false) {
+    gameState[kind] = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+    syncMixerControls();
+    if (persist) saveProgress();
+  }
+
+  musicVolumeControl?.addEventListener('input', event => setMixerVolume('musicVolume', event.currentTarget.value));
+  musicVolumeControl?.addEventListener('change', event => setMixerVolume('musicVolume', event.currentTarget.value, true));
+  sfxVolumeControl?.addEventListener('input', event => setMixerVolume('sfxVolume', event.currentTarget.value));
+  sfxVolumeControl?.addEventListener('change', event => setMixerVolume('sfxVolume', event.currentTarget.value, true));
+
   music.addEventListener('error', () => {
     if (!musicEnabled) return;
     const trackTitle = levels[levelIndex]?.trackTitle || 'ALBUM TRACK';
@@ -492,6 +522,7 @@
   sfxButton?.addEventListener('click', toggleSfx);
   syncMusicButton();
   syncSfxButton();
+  syncMixerControls();
 
   function unlockAudio() {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -499,7 +530,7 @@
     if (audioContext && !sfxOutput) {
       const output = audioContext.createGain();
       const compressor = audioContext.createDynamicsCompressor?.();
-      output.gain.value = 0.9;
+      output.gain.value = 0.9 * (gameState.sfxVolume ?? 100) / 100;
       if (compressor) {
         compressor.threshold.value = -8;
         compressor.knee.value = 12;
@@ -800,7 +831,9 @@
         runFinished: gameState.runFinished,
         lastRunIsRecord: gameState.lastRunIsRecord,
         musicEnabled,
-        sfxEnabled: gameState.sfxEnabled
+        sfxEnabled: gameState.sfxEnabled,
+        musicVolume: gameState.musicVolume,
+        sfxVolume: gameState.sfxVolume
       }
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -833,6 +866,8 @@
       currentLevel: integer(source.currentLevel, 0, levels.length - 1) ? source.currentLevel : source.maxLevel,
       runFinished: source.runFinished === true, lastRunIsRecord: source.lastRunIsRecord === true,
       musicEnabled: source.musicEnabled !== false, sfxEnabled: source.sfxEnabled !== false,
+      musicVolume: Number.isInteger(source.musicVolume) && source.musicVolume >= 0 && source.musicVolume <= 100 ? source.musicVolume : 100,
+      sfxVolume: Number.isInteger(source.sfxVolume) && source.sfxVolume >= 0 && source.sfxVolume <= 100 ? source.sfxVolume : 100,
       checkpoint: null
     };
     const best = source.bestRunSeconds;
@@ -862,6 +897,7 @@
       musicEnabled = gameState.musicEnabled !== false;
       syncMusicButton();
       syncSfxButton();
+      syncMixerControls();
       music.pause();
       music.removeAttribute('src');
       music.load();
@@ -1001,7 +1037,7 @@
         sound('pickup');
         haptic('soft');
       }
-      music.volume = 0.38 * (1 - clamp(cutscene.time / 2.45, 0, 1));
+      music.volume = MUSIC_MAX_VOLUME * (gameState.musicVolume / 100) * (1 - clamp(cutscene.time / 2.45, 0, 1));
       for (const particle of particles) {
         particle.life -= dt;
         particle.x += particle.vx * dt;
@@ -2242,7 +2278,7 @@
     pendingBossVictory = null;
     cutscene = null;
     music.pause();
-    music.volume = 0.38;
+    music.volume = MUSIC_MAX_VOLUME * gameState.musicVolume / 100;
     if (boss) boss.alive = false;
     showOverlay(`${stage.shard} ПОЛУЧЕН`, `Ты одолел ${stage.boss}. ${stage.victoryLine}${abilityText} Музыка этого этапа — трек ${String(stage.track).padStart(2, '0')}.`, 'СЛЕДУЮЩИЙ ЭТАП', () => startLevel(levelIndex + 1));
   }
