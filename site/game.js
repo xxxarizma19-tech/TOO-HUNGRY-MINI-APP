@@ -633,6 +633,7 @@
       case 'pickup': tone(530, 980, 0.13, 'sine', 0.1); tone(790, 1350, 0.18, 'sine', 0.09, 0.09); break;
       case 'finaleLaunch': tone(230, 720, 0.32, 'sine', 0.075); noise(0.11, 0.045, 2100, 0.08); break;
       case 'finaleImpact': noise(0.22, 0.18, 1050); tone(185, 58, 0.34, 'triangle', 0.17); tone(690, 1040, 0.42, 'sine', 0.06, 0.13); break;
+      case 'introSplash': noise(0.18, 0.12, 1250); tone(245, 78, 0.24, 'triangle', 0.11); tone(720, 460, 0.2, 'sine', 0.045, 0.035); break;
       case 'victory': [523, 659, 784].forEach((note, i) => tone(note, note * 1.15, 0.34, 'sine', 0.09, i * 0.09)); break;
     }
   }
@@ -1035,7 +1036,7 @@
     prepareCutsceneGamepad();
     [art.chef, art.chefPour, art.chefMiss].forEach(requestArt);
     preloadStageArt(0);
-    cutscene = { started: performance.now(), time: 0 };
+    cutscene = { started: performance.now(), time: 0, splashCue: false };
     document.body.classList.remove('playing');
     setOverlayVisible(false);
     canvas.focus({ preventScroll: true });
@@ -1100,6 +1101,11 @@
       scheduleCutsceneFrame();
       return;
     }
+    if (!cutscene.splashCue && cutscene.time >= 6.1) {
+      cutscene.splashCue = true;
+      sound('introSplash');
+      haptic('soft');
+    }
     if (cutscene.time >= 12) { skipCutscene(); return; }
     drawCutscene(cutscene.time);
     scheduleCutsceneFrame();
@@ -1110,6 +1116,14 @@
     if (background.complete && background.naturalWidth) ctx.drawImage(background, 0, 0, W, H);
     else { ctx.fillStyle = '#120d10'; ctx.fillRect(0, 0, W, H); }
     ctx.fillStyle = '#09070ab0'; ctx.fillRect(0, 0, W, H);
+    const cameraZoom = prefersReducedMotion ? 1 : 1 + clamp(seconds / 12, 0, 1) * 0.045;
+    const impactShake = !prefersReducedMotion && seconds >= 6.1 && seconds < 6.48 ? (1 - (seconds - 6.1) / 0.38) : 0;
+    const shakeX = impactShake * Math.sin(seconds * 73) * 4.5;
+    const shakeY = impactShake * Math.cos(seconds * 61) * 2.5;
+    ctx.save();
+    ctx.translate(W / 2 + shakeX, H / 2 + shakeY);
+    ctx.scale(cameraZoom, cameraZoom);
+    ctx.translate(-W / 2, -H / 2);
     const chef = seconds > 6.1 ? art.chefMiss : seconds > 2.1 ? art.chefPour : art.chef;
     if (chef.complete && chef.naturalWidth) {
       const entrance = prefersReducedMotion ? 1 : Math.min(1, seconds / 1.2);
@@ -1147,6 +1161,7 @@
         }
       }
     }
+    ctx.restore();
     const caption = seconds < 2.8 ? 'XARIZMA19 ГОТОВИТ ПОСЛЕДНИЙ ИНГРЕДИЕНТ' : seconds < 6.5 ? 'НО КАПЛЯ ПРОМАЗЫВАЕТ МИМО БЛЮДА…' : seconds < 9.6 ? 'КАПЛЯ ОЖИВАЕТ И РЕШАЕТ ДОБРАТЬСЯ САМА' : 'ЧЕТЫРЕ КУХНИ · ЧЕТЫРЕ БОССА · ОДНА ПОСЛЕДНЯЯ КАПЛЯ';
     announce(caption);
     rounded(52, 32, 482, 35, 4, '#100d10d9');
