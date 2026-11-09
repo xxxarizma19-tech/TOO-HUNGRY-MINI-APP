@@ -1315,7 +1315,7 @@
       ? (gameState.lastRunIsRecord ? 'НОВЫЙ РЕКОРД!' : `ЛУЧШЕЕ ВРЕМЯ ${formatTime(gameState.bestRunSeconds)}`)
       : 'ПОВТОРНЫЙ ЗАБЕГ';
     const summary = `ПОПАЛИ В БЛЮДО. ЗАБЕГ ${formatTime(gameState.runSeconds)} · ВРАГИ ${gameState.runKills} · УВОРОТЫ ${gameState.runDodges || 0} · ЛУЧШАЯ СЕРИЯ ${gameState.runPeakStreak || 0} · ${recordText}. Спасибо, что прошёл этот путь под альбом TOO HUNGRY.`;
-    showOverlay('TOO HUNGRY?', summary, 'НОВЫЙ ЗАБЕГ', restartCampaign);
+    showOverlay('TOO HUNGRY', summary, 'НОВЫЙ ЗАБЕГ', restartCampaign);
     if (fullCampaign && runGradeBadge) {
       const grade = getChefGrade();
       runGradeBadge.dataset.rank = grade.rank;
