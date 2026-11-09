@@ -28,6 +28,14 @@
   const saveTransferHint = document.querySelector('#saveTransferHint');
   const defaultSaveTransferHint = saveTransferHint?.textContent || '';
   const saveFileInput = document.querySelector('#saveFileInput');
+  const overlayBackground = [
+    document.querySelector('.topline'), canvas, gameStatus, document.querySelector('#pauseButton'),
+    mobileControls, document.querySelector('.footer'), document.querySelector('.rotate-hint')
+  ].filter(Boolean);
+  function setOverlayVisible(visible) {
+    overlay.style.display = visible ? 'grid' : 'none';
+    overlayBackground.forEach(element => { element.inert = visible; });
+  }
   const W = canvas.width;
   const H = canvas.height;
   const compactControlsQuery = window.matchMedia?.('(pointer: coarse), (max-width: 700px)');
@@ -428,7 +436,7 @@
       gameState.checkpoint = { stageIndex: levelIndex, finale: true, playerX: player.x, hp: player.hp, obstacles: 0, kills: 0 };
       saveProgress();
     }
-    overlay.style.display = 'none';
+    setOverlayVisible(false);
     document.body.classList.add('playing');
     running = true;
     playerMoving = false;
@@ -677,7 +685,7 @@
     if (saveTransferHint) saveTransferHint.hidden = true;
     if (returnToTitleButton) returnToTitleButton.hidden = true;
     startButton.onclick = action;
-    overlay.style.display = 'grid';
+    setOverlayVisible(true);
     startButton.focus({ preventScroll: true });
     startMenuGamepadNavigation();
   }
@@ -1029,7 +1037,7 @@
     preloadStageArt(0);
     cutscene = { started: performance.now(), time: 0 };
     document.body.classList.remove('playing');
-    overlay.style.display = 'none';
+    setOverlayVisible(false);
     canvas.focus({ preventScroll: true });
     scheduleCutsceneFrame();
   }
@@ -1359,7 +1367,7 @@
     running = false;
     cutscene = { started: performance.now(), time: 0, mode: 'ending', launchCue: false, impactCue: false, rewardCue: false };
     document.body.classList.remove('playing');
-    overlay.style.display = 'none';
+    setOverlayVisible(false);
     canvas.focus({ preventScroll: true });
     scheduleCutsceneFrame();
   }
