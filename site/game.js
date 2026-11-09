@@ -373,7 +373,7 @@
 
   function newPlayer() {
     const maxHp = gameState.secretSeen ? 119 : 100;
-    return { x: 145, y: 420, z: 0, vz: 0, jumpBuffer: 0, coyoteTime: 0, landingFx: 0, hp: maxHp, hpTrail: maxHp, maxHp, face: 1, attack: 0, attackPose: '', attackDuration: 0, attackCooldown: 0, dash: 0, dashCooldown: 0, whipCooldown: 0, heavyCooldown: 0, invuln: 0, dodgeReady: false, combo: 0, comboTime: 0, finisher: 0, walk: 0, stepCooldown: 0, hurt: 0 };
+    return { x: 145, y: 420, z: 0, vz: 0, jumpBuffer: 0, coyoteTime: 0, landingFx: 0, hp: maxHp, hpTrail: maxHp, maxHp, face: 1, attack: 0, attackPose: '', attackDuration: 0, attackCooldown: 0, dash: 0, dashCooldown: 0, whipCooldown: 0, heavyCooldown: 0, invuln: 0, dodgeReady: false, combo: 0, attackCombo: 0, comboTime: 0, finisher: 0, walk: 0, stepCooldown: 0, hurt: 0 };
   }
 
   function startLevel(index, resume = false) {
@@ -1575,16 +1575,20 @@
 
   function attack() {
     if (!running || player.attackCooldown > 0) return;
+    const nextCombo = player.comboTime > 0 ? player.combo % 3 + 1 : 1;
+    player.attackCombo = nextCombo;
     player.attack = 0.27;
     player.attackPose = 'punch';
     player.attackDuration = 0.27;
     player.attackCooldown = 0.38;
-    player.combo = player.comboTime > 0 ? player.combo % 3 + 1 : 1;
-    player.comboTime = 1;
-    if (player.combo === 3) player.finisher = prefersReducedMotion ? 0.14 : 0.24;
-    hitTargets(player.combo === 3 ? 102 : 82, player.combo === 3 ? 32 : 19, player.combo === 3 ? 54 : 42);
-    burst(player.x + player.face * 45, player.y - 42, sauceRushTime > 0 || player.combo === 3 ? '#ffbd68' : '#ff6558', player.combo === 3 || sauceRushTime > 0 ? 18 : 7);
-    sound(player.combo === 3 ? 'heavy' : 'attack');
+    const connected = hitTargets(nextCombo === 3 ? 102 : 82, nextCombo === 3 ? 32 : 19, nextCombo === 3 ? 54 : 42);
+    if (connected) {
+      player.combo = nextCombo;
+      player.comboTime = 1;
+      if (nextCombo === 3) player.finisher = prefersReducedMotion ? 0.14 : 0.24;
+    }
+    burst(player.x + player.face * 45, player.y - 42, sauceRushTime > 0 || nextCombo === 3 ? '#ffbd68' : '#ff6558', nextCombo === 3 || sauceRushTime > 0 ? 18 : 7);
+    sound(nextCombo === 3 ? 'heavy' : 'attack');
     haptic('light');
   }
 
@@ -1674,6 +1678,7 @@
       sound('counter');
       haptic('medium');
     }
+    return counterHit;
   }
 
   function hurtEnemy(enemy, damage) {
@@ -2683,7 +2688,7 @@
       const height = (whipping ? 158 : 144) * scale;
       const attackProgress = player.attack > 0 ? clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1) : 0;
       const punchPulse = Math.sin(attackProgress * Math.PI);
-      const lunge = punchPulse * (player.combo === 3 ? 15 : 9);
+      const lunge = punchPulse * (player.attackCombo === 3 ? 15 : 9);
       const hurtPulse = clamp(player.hurt / 0.36, 0, 1);
       ctx.save();
       ctx.translate(x + player.face * lunge, y + bounce + punchPulse * 2);
@@ -2694,7 +2699,7 @@
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
     }
-    if (player.attack > 0 && player.attackPose === 'punch' && player.combo < 3) {
+    if (player.attack > 0 && player.attackPose === 'punch' && player.attackCombo < 3) {
       const progress = clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1);
       if (progress > 0.12 && progress < 0.88) {
         const fade = prefersReducedMotion ? 0.32 : Math.sin(Math.PI * progress) * 0.72;
@@ -2705,9 +2710,9 @@
         if (!prefersReducedMotion) ctx.rotate((progress - 0.5) * 0.34);
         ctx.globalAlpha = fade;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = player.combo === 2 ? '#ffc36f' : '#ff7165';
-        ctx.lineWidth = player.combo === 2 ? 6 : 4.5;
-        ctx.shadowColor = player.combo === 2 ? '#ffad57' : '#ff5147';
+        ctx.strokeStyle = player.attackCombo === 2 ? '#ffc36f' : '#ff7165';
+        ctx.lineWidth = player.attackCombo === 2 ? 6 : 4.5;
+        ctx.shadowColor = player.attackCombo === 2 ? '#ffad57' : '#ff5147';
         ctx.shadowBlur = prefersReducedMotion ? 0 : 10;
         ctx.beginPath();
         ctx.arc(-12, 1, radius, -0.82, 0.78);
