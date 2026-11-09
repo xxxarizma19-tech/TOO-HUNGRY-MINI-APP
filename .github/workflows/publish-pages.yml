@@ -1,13 +1,10 @@
 name: Publish TOO HUNGRY
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       confirm_public_release:
-        description: Confirm the approved public release of the game, chef image, and album tracks
+        description: Confirm that the owner has tested the game and approved its live publication
         required: true
         type: boolean
         default: false
