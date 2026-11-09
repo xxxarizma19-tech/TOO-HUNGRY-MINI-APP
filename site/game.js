@@ -1589,7 +1589,7 @@
     }
     burst(player.x + player.face * 45, player.y - 42, sauceRushTime > 0 || nextCombo === 3 ? '#ffbd68' : '#ff6558', nextCombo === 3 || sauceRushTime > 0 ? 18 : 7);
     sound(nextCombo === 3 ? 'heavy' : 'attack');
-    haptic('light');
+    haptic(connected && nextCombo === 3 ? 'heavy' : connected && nextCombo === 2 ? 'medium' : 'light');
   }
 
   function jump() {
@@ -2193,6 +2193,8 @@
     spawnDamageNumber(player.x, player.y - 124, damage, false, false, false, true);
     streakKills = 0;
     streakTime = 0;
+    player.combo = 0;
+    player.comboTime = 0;
     player.invuln = 0.72;
     player.hurt = 0.36;
     player.x = clamp(player.x + Math.sign(player.x - sourceX || -1) * 28, 42, worldWidth - 42);
