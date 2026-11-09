@@ -1494,14 +1494,6 @@
   pauseButton.addEventListener('click', pauseGame);
   window.addEventListener('keydown', event => {
     const key = keyFromEvent(event);
-    if (overlay.style.display === 'grid' && event.key === 'Tab') {
-      const focusable = [...overlay.querySelectorAll('a[href],button:not(:disabled)')].filter(element => !element.hidden && element.getClientRects().length > 0);
-      if (focusable.length) {
-        const first = focusable[0], last = focusable[focusable.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-      }
-    }
     const editingTarget = event.target instanceof Element && event.target.closest('input,select,textarea,[contenteditable="true"]');
     if (overlay.style.display === 'grid' && !editingTarget && !event.repeat && ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'home', 'end'].includes(key)) {
       const focusable = [...overlay.querySelectorAll('a[href],button:not(:disabled)')].filter(element => !element.hidden && element.getClientRects().length > 0);
