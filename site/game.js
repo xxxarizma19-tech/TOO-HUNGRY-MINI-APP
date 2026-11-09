@@ -2694,6 +2694,34 @@
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
     }
+    if (player.attack > 0 && player.attackPose === 'punch' && player.combo < 3) {
+      const progress = clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1);
+      if (progress > 0.12 && progress < 0.88) {
+        const fade = prefersReducedMotion ? 0.32 : Math.sin(Math.PI * progress) * 0.72;
+        const radius = 34 + progress * 7;
+        ctx.save();
+        ctx.translate(x + player.face * 49, y - 76);
+        ctx.scale(player.face, 1);
+        if (!prefersReducedMotion) ctx.rotate((progress - 0.5) * 0.34);
+        ctx.globalAlpha = fade;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = player.combo === 2 ? '#ffc36f' : '#ff7165';
+        ctx.lineWidth = player.combo === 2 ? 6 : 4.5;
+        ctx.shadowColor = player.combo === 2 ? '#ffad57' : '#ff5147';
+        ctx.shadowBlur = prefersReducedMotion ? 0 : 10;
+        ctx.beginPath();
+        ctx.arc(-12, 1, radius, -0.82, 0.78);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#fff0d0';
+        ctx.lineWidth = 1.3;
+        ctx.globalAlpha *= 0.82;
+        ctx.beginPath();
+        ctx.arc(-12, 1, radius - 4, -0.68, 0.6);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
     if (player.finisher > 0) {
       const progress = prefersReducedMotion ? 0.42 : 1 - player.finisher / 0.24;
       const fade = prefersReducedMotion ? 0.72 : Math.sin(Math.PI * clamp(progress, 0.08, 0.92));
