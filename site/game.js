@@ -639,6 +639,26 @@
     } catch { /* Haptics are optional. */ }
   }
 
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Tab' || overlay.style.display !== 'grid') return;
+    const focusable = [...overlay.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+      .filter(element => !element.hidden && element.getClientRects().length > 0);
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const activeInside = overlay.contains(document.activeElement);
+    if (event.shiftKey && (!activeInside || document.activeElement === first)) {
+      event.preventDefault();
+      last.focus({ preventScroll: true });
+    } else if (!event.shiftKey && (!activeInside || document.activeElement === last)) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  }, true);
+
   function showOverlay(heading, body, buttonText, action) {
     stopTitleAttract();
     running = false;
