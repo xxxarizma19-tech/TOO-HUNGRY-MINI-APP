@@ -220,7 +220,7 @@
   let gameState = loadProgress();
   let musicEnabled = gameState.musicEnabled !== false;
   let levelIndex = Math.min(gameState.maxLevel, levels.length - 1);
-  let player, enemies, boss, hazards, particles, drops, damageNumbers = [], finaleObstacles = [];
+  let player, enemies, boss, hazards, particles, drops, damageNumbers = [], finaleObstacles = [], dashStains = [];
   let cameraX = 0, worldWidth = W, waveIndex = -1, nextWaveAt = 620, fightGate = 0, wavesCleared = 0, enemiesDefeated = 0, totalEnemies = 0, waveQueue = [], waveKills = 0, waveReinforcementAt = 0, bossSpawned = false, bossIntro = 0;
   let running = false, playerMoving = false, time = 0, lastTime = 0, shake = 0, hitStop = 0, toast = '', toastTime = 0, stageIntroTime = 0, saveTimer = 0, streakKills = 0, streakTime = 0, sauceRushTime = 0, sauceRushMaxTime = 0, perfectDodgeTime = 0, counterTime = 0, attractAnimationFrame = 0, attractStartedAt = 0;
   let cutscene = null, pendingBossVictory = null;
@@ -420,6 +420,7 @@
     bossIntro = 0;
     hazards = [];
     particles = [];
+    dashStains = [];
     drops = [];
     damageNumbers = [];
     finaleObstacles = stage.finale ? [780, 1510, 2260, 3020].map((x, i) => ({ x, cleared: i < (checkpoint?.obstacles ?? 0) })) : [];
@@ -1629,7 +1630,15 @@
     player.dashCooldown = 1.0;
     player.invuln = 0.38;
     player.dodgeReady = true;
+    const dashStartX = player.x;
     player.x = clamp(player.x + player.face * 158, 44, worldWidth - 44);
+    if (!prefersReducedMotion) {
+      const dashDistance = player.x - dashStartX;
+      for (let i = 1; i <= 5; i++) {
+        const progress = i / 6;
+        dashStains.push({ x: dashStartX + dashDistance * progress, y: player.y + 4, life: 0.62, maxLife: 0.62, size: 3.5 + (i % 2) * 1.4 });
+      }
+    }
     hitTargets(80, 32, 52);
     burst(player.x - player.face * 42, player.y - 24, '#ff342b', 15);
     sound('dash');
@@ -2251,6 +2260,8 @@
       particle.rotation += particle.spin * dt;
     }
     particles = particles.filter(particle => particle.life > 0);
+    for (const stain of dashStains) stain.life -= dt;
+    dashStains = dashStains.filter(stain => stain.life > 0);
   }
 
   function updateDrops(dt) {
@@ -2322,6 +2333,7 @@
     toast = '';
     enemies = [];
     hazards = [];
+    dashStains = [];
     running = false;
     telegramApp?.BackButton?.hide?.();
     document.body.classList.remove('playing');
@@ -2425,6 +2437,7 @@
     ctx.save();
     ctx.translate(-cameraX, 0);
     drawFloor();
+    drawDashStains();
     if (levels[levelIndex].finale) drawFinaleObstacles();
     for (const hazard of hazards) drawHazard(hazard);
     for (const drop of drops) drawDrop(drop);
@@ -3100,6 +3113,30 @@
       ctx.restore();
     }
     ctx.globalAlpha = 1;
+  }
+
+  function drawDashStains() {
+    if (prefersReducedMotion) return;
+    for (const stain of dashStains) {
+      const fade = clamp(stain.life / stain.maxLife, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = fade * 0.62;
+      ctx.fillStyle = '#d42e32';
+      ctx.shadowColor = '#ff493c';
+      ctx.shadowBlur = 9 * fade;
+      ctx.beginPath();
+      ctx.ellipse(stain.x, stain.y, stain.size * (1.35 - fade * 0.25), stain.size * 0.48, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha *= 0.78;
+      ctx.strokeStyle = '#ffb36b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(stain.x - stain.size * 0.65, stain.y - 2);
+      ctx.lineTo(stain.x + stain.size * 0.55, stain.y - 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   function drawDamageNumbers() {
