@@ -54,12 +54,13 @@
   compactHudResizeObserver?.observe(canvas);
   const telegramApp = window.Telegram?.WebApp;
   const desktopControlHint = '4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · M (Ь) — музыка · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст · Start пауза · меню: крестовина + A';
-  const touchControlHint = 'Кнопки слева — движение по арене<br>Кнопка ↑ справа — прыжок · УДАР (удерживать) — серия атак<br>Геймпад: A прыжок · B удар · Start пауза<br>Кольца на кнопках подскажут, когда умения снова готовы';
-  const leftHandedTouchControlHint = 'Кнопки справа — движение по арене<br>Кнопка ↑ слева — прыжок · УДАР (удерживать) — серия атак<br>Геймпад: A прыжок · B удар · Start пауза<br>Кольца на кнопках подскажут, когда умения снова готовы';
+  const touchControlHint = 'Слева — движение и кнопка паузы · справа — прыжок и атаки<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Кольца показывают готовность способностей';
+  const leftHandedTouchControlHint = 'Справа — движение и кнопка паузы · слева — прыжок и атаки<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Кольца показывают готовность способностей';
   let leftHandedControls = false;
   try { leftHandedControls = localStorage.getItem('tooHungryLeftHanded') === 'true'; } catch { /* The layout preference can stay session-only if storage is blocked. */ }
   function syncHandednessToggle() {
     mobileControls?.classList.toggle('is-left-handed', leftHandedControls);
+    document.querySelector('#pauseButton')?.classList.toggle('is-left-handed', leftHandedControls);
     handednessToggle?.setAttribute('aria-pressed', String(leftHandedControls));
     handednessToggle?.setAttribute('aria-label', leftHandedControls ? 'Атаки слева, движение справа' : 'Атаки справа, движение слева');
     if (handednessToggle) handednessToggle.textContent = leftHandedControls ? 'АТАКА СЛЕВА' : 'АТАКА СПРАВА';
@@ -448,9 +449,9 @@
   }
 
   function makeEnemy(x, type, elite = false) {
-    const baseHp = 270 + levelIndex * 40 + Math.max(0, waveIndex) * 16;
+    const baseHp = levelIndex === 0 ? 185 + Math.max(0, waveIndex) * 10 : 270 + levelIndex * 40 + Math.max(0, waveIndex) * 16;
     const hp = Math.round(baseHp * (elite ? 1.5 : 1));
-    return { x, y: 412 + Math.random() * 52, type, elite, enraged: false, hp, hpTrail: hp, maxHp: hp, alive: true, spawn: prefersReducedMotion ? 0 : 0.32, hit: 0, knockback: 0, timer: 0.7 + Math.random(), vx: 0, swing: Math.random() * 6, face: -1, state: 'idle', stateTime: 0, attackCooldown: (0.9 + Math.random() * 1.2) * (elite ? 0.82 : 1), guardCooldown: 1.2 + Math.random() * 2, guarding: 0 };
+    return { x, y: 412 + Math.random() * 52, type, elite, enraged: false, hp, hpTrail: hp, maxHp: hp, alive: true, spawn: prefersReducedMotion ? 0 : 0.32, hit: 0, knockback: 0, timer: 0.7 + Math.random(), vx: 0, swing: Math.random() * 6, face: -1, state: 'idle', stateTime: 0, attackCooldown: (levelIndex === 0 ? 1.45 + Math.random() * 0.9 : 0.9 + Math.random() * 1.2) * (elite ? 0.82 : 1), guardCooldown: 1.2 + Math.random() * 2, guarding: 0 };
   }
 
   function updateMusic(trackNumber) {
@@ -609,6 +610,10 @@
       () => { noise(0.11, 0.055, 4200); tone(1100, 520, 0.16, 'sawtooth', 0.04); }
     ];
     switch (kind) {
+      case 'playerDown': noise(0.28, 0.12, 520); tone(190, 48, 0.42, 'triangle', 0.15, 0.035); break;
+      case 'waveSpawn': tone(210, 470, 0.16, 'triangle', 0.065); noise(0.09, 0.045, 980, 0.04); break;
+      case 'abilityUnlock': [392, 523, 784].forEach((note, i) => tone(note, note * 1.08, 0.23, 'sine', 0.07, i * 0.11)); break;
+      case 'enemyTell': tone(310, 180, 0.1, 'triangle', 0.04); break;
       case 'jump': tone(250, 620, 0.13, 'sine', 0.09); break;
       case 'step': tone(88 + Math.random() * 16, 56, 0.055, 'triangle', 0.026); noise(0.035, 0.028, 560); break;
       case 'land': tone(155, 65, 0.11, 'triangle', 0.08); noise(0.06, 0.055, 740, 0.01); break;
@@ -1932,7 +1937,7 @@
       return;
     }
     if (!bossSpawned && player.x >= worldWidth - W * 0.86) {
-      const maxHp = 850 + levelIndex * 260;
+      const maxHp = levelIndex === 0 ? 680 : 850 + levelIndex * 260;
       const savedBoss = gameState.checkpoint?.stageIndex === levelIndex && gameState.checkpoint?.boss ? gameState.checkpoint : null;
       const hp = Math.min(maxHp, savedBoss?.bossHp ?? maxHp);
       boss = { x: worldWidth - 205, y: 414, hp, hpTrail: hp, maxHp, alive: true, state: 'idle', timer: 1.25, stun: 0, phase: hp / maxHp > 0.55 ? 1 : hp / maxHp > 0.24 ? 2 : 3, phaseFlash: 0, attack: 1, lastAttack: 0, chainRemaining: 0, hitDone: false };
@@ -1952,7 +1957,7 @@
   function spawnWave(index) {
     waveIndex = index;
     wavesCleared = index;
-    const amount = 4 + levelIndex + index;
+    const amount = levelIndex === 0 ? 3 + index : 4 + levelIndex + index;
     const start = Math.max(540 + index * 1050, nextWaveAt - 160);
     const end = Math.min(worldWidth - 570, start + 760);
     fightGate = end + 110;
@@ -1978,7 +1983,8 @@
     announce(`Волна ${index + 1} из ${levels[levelIndex].waves}. Противников: ${amount}.`);
     gameState.checkpoint = { stageIndex: levelIndex, waveIndex: index, playerX: player.x, hp: player.hp, kills: enemiesDefeated };
     saveProgress();
-    if (index > 0) { sound('bossAttack'); haptic('medium'); }
+    sound('waveSpawn');
+    if (index > 0) haptic('medium');
   }
 
   function spawnWaveBatch(count, reinforcement) {
@@ -2051,6 +2057,7 @@
         if (enemy.guardCooldown <= 0) {
           enemy.guarding = 0.9;
           enemy.guardCooldown = 3.4;
+          sound('guard');
         }
       }
     }
@@ -2066,10 +2073,10 @@
         enemy.stateTime = 0.28;
         if (enemy.type === 'tomato' && distance > 115) {
           const flight = 0.7;
-          hazards.push({ type: 'tomato', x: enemy.x, y: enemy.y - 76, startX: enemy.x, startY: enemy.y - 76, targetX: player.x, targetY: player.y - 8, flight, elapsed: 0, damage: 11 + levelIndex * 2 + (enemy.elite ? 4 : 0), life: flight + 0.5, landed: false, hit: false });
+          hazards.push({ type: 'tomato', x: enemy.x, y: enemy.y - 76, startX: enemy.x, startY: enemy.y - 76, targetX: player.x, targetY: player.y - 8, flight, elapsed: 0, damage: (levelIndex === 0 ? 8 : 11 + levelIndex * 2) + (enemy.elite ? 4 : 0), life: flight + 0.5, landed: false, hit: false });
           sound('tomatoThrow');
         } else if (distance < 96 && depth < 50 && player.z > -36 && canBeHit()) {
-          damagePlayer((enemy.type === 'mozzarella' ? 15 : 10 + levelIndex) + (enemy.elite ? 3 : 0), enemy.x);
+          damagePlayer((levelIndex === 0 ? (enemy.type === 'mozzarella' ? 10 : 7) : (enemy.type === 'mozzarella' ? 15 : 10 + levelIndex)) + (enemy.elite ? 3 : 0), enemy.x);
           const impactSound = { garlic: 'garlicStab', tomato: 'tomatoBump', mozzarella: 'heavy', pepper: 'pepperRush' }[enemy.type];
           sound(impactSound || 'enemyRush');
         }
@@ -2087,7 +2094,8 @@
       }
       if (enemy.attackCooldown <= 0 && depth < 64 && ((enemy.type === 'tomato' && distance < 390 && distance > 100) || distance < 76)) {
         enemy.state = 'tell';
-        const tell = enemy.type === 'pepper' ? 0.3 : enemy.type === 'mozzarella' ? 0.72 : 0.52;
+        sound('enemyTell');
+        const tell = (enemy.type === 'pepper' ? 0.3 : enemy.type === 'mozzarella' ? 0.72 : 0.52) + (levelIndex === 0 ? 0.18 : 0);
         enemy.stateTime = tell * (enemy.elite ? enemy.enraged ? 0.64 : 0.82 : 1);
         const cooldown = enemy.type === 'tomato' ? 2.8 : enemy.type === 'pepper' ? 1.8 : 2.25;
         enemy.attackCooldown = cooldown * (enemy.elite ? enemy.enraged ? 0.58 : 0.82 : 1);
@@ -2099,7 +2107,7 @@
       enemy.x = clamp(enemy.x + enemy.knockback * dt, 42, worldWidth - 42);
       enemy.knockback *= Math.pow(0.018, dt);
     } else enemy.knockback = 0;
-    if (distance < 38 && depth < 32 && canBeHit() && enemy.state === 'idle') damagePlayer(5, enemy.x);
+    if (distance < 38 && depth < 32 && canBeHit() && enemy.state === 'idle') damagePlayer(levelIndex === 0 ? 3 : 5, enemy.x);
   }
 
   function updateBoss(dt) {
@@ -2120,7 +2128,7 @@
     boss.stun = Math.max(0, boss.stun - dt);
     if (boss.state === 'idle' && boss.timer <= 0) {
       boss.chainRemaining = boss.phase === 3 && Math.random() < 0.42 ? 1 : 0;
-      warnBossAttack(boss.phase === 1 ? 1.05 : boss.phase === 2 ? 0.72 : 0.48, false, boss.chainRemaining > 0);
+      warnBossAttack((boss.phase === 1 ? 1.05 : boss.phase === 2 ? 0.72 : 0.48) + (levelIndex === 0 ? 0.24 : 0), false, boss.chainRemaining > 0);
     } else if (boss.state === 'tell' && boss.timer <= 0) {
       boss.state = 'attack';
       boss.attackDuration = boss.phase === 3 ? 0.64 : 0.52;
@@ -2133,11 +2141,11 @@
         toast = `ФИНАЛ СВЯЗКИ · ${bossWarning()}`;
       } else {
         boss.state = 'recover';
-        boss.timer = boss.phase === 1 ? 1.35 : boss.phase === 2 ? 0.86 : 0.62;
+        boss.timer = (boss.phase === 1 ? 1.35 : boss.phase === 2 ? 0.86 : 0.62) + (levelIndex === 0 ? 0.24 : 0);
       }
     } else if (boss.state === 'recover' && boss.timer <= 0) {
       boss.state = 'idle';
-      boss.timer = boss.phase === 1 ? 1.12 : boss.phase === 2 ? 0.72 : 0.5;
+        boss.timer = (boss.phase === 1 ? 1.12 : boss.phase === 2 ? 0.72 : 0.5) + (levelIndex === 0 ? 0.2 : 0);
     }
   }
 
@@ -2184,10 +2192,10 @@
     }
   }
 
-  function makeHazard(x, y, type, damage) { return { x, y, type, damage: damage + levelIndex * 2 + (boss?.phase === 3 ? 3 : 0), life: 1.05, warned: true, hit: false }; }
+  function makeHazard(x, y, type, damage) { return { x, y, type, damage: Math.round((damage + levelIndex * 2 + (boss?.phase === 3 ? 3 : 0)) * (levelIndex === 0 ? 0.78 : 1)), life: 1.05, warned: true, hit: false }; }
 
   function tryBossHit(range, depth, damage) {
-    if (Math.abs(player.x - boss.x) < range && Math.abs(player.y - boss.y) < depth && canBeHit() && player.z > -25) damagePlayer(damage + levelIndex * 2 + (boss.phase === 3 ? 3 : 0), boss.x);
+    if (Math.abs(player.x - boss.x) < range && Math.abs(player.y - boss.y) < depth && canBeHit() && player.z > -25) damagePlayer(Math.round((damage + levelIndex * 2 + (boss.phase === 3 ? 3 : 0)) * (levelIndex === 0 ? 0.78 : 1)), boss.x);
   }
 
   function canBeHit() { return player.invuln <= 0 || player.dodgeReady; }
@@ -2327,8 +2335,12 @@
     sound('victory');
     const stage = levels[levelIndex];
     preloadStageArt(Math.min(levelIndex + 1, levels.length - 1));
-    const abilityKeys = ['K / X (Л / Ч)', 'L (Д)', 'I (Ш)'];
-    const abilityText = stage.ability ? ` Открыта способность «${stage.ability}». Клавиша: ${abilityKeys[levelIndex]}.` : '';
+    const abilityGuides = [
+      'РЫВОК ОГНЁМ — короткий неуязвимый рывок сквозь опасность. ПК: K или X (Л или Ч) · телефон: кнопка «РЫВОК».',
+      'СОУСНЫЙ ХЛЫСТ — дальняя атака по врагам перед каплей. ПК: L (Д) · телефон: кнопка «ХЛЫСТ».',
+      'МОЩНЫЙ УДАР — медленный, но сильный удар. ПК: I (Ш) · телефон: кнопка «ТЯЖ».',
+    ];
+    const abilityText = stage.ability ? ` НОВАЯ СПОСОБНОСТЬ: ${stage.ability}! ${abilityGuides[levelIndex]}` : '';
     pendingBossVictory = { stage, abilityText };
     toast = '';
     enemies = [];
@@ -2351,17 +2363,24 @@
     music.pause();
     music.volume = MUSIC_MAX_VOLUME * gameState.musicVolume / 100;
     if (boss) boss.alive = false;
+    if (stage.ability) sound('abilityUnlock');
     showOverlay(`${stage.shard} ПОЛУЧЕН`, `Ты одолел ${stage.boss}. ${stage.victoryLine}${abilityText} Музыка этого этапа — трек ${String(stage.track).padStart(2, '0')}.`, 'СЛЕДУЮЩИЙ ЭТАП', () => startLevel(levelIndex + 1));
   }
 
   function loseLevel() {
     music.pause();
+    sound('playerDown');
     const canResume = gameState.checkpoint?.stageIndex === levelIndex;
     if (canResume && boss?.alive) {
       gameState.checkpoint = { ...gameState.checkpoint, boss: true, bossHp: Math.max(1, boss.hp), playerX: player.x };
       saveProgress();
     }
-    showOverlay('КАПЛЯ РАСТЕКЛАСЬ', 'Попробуй ещё раз: прогресс откатится к контрольной точке, а способности останутся открытыми.', canResume ? 'ПОВТОРИТЬ С КОНТРОЛЬНОЙ ТОЧКИ' : 'ПОВТОРИТЬ ЭТАП', () => startLevel(levelIndex, canResume));
+    showOverlay('КАПЛЯ РАСТЕКЛАСЬ', canResume ? 'Выбери, как продолжить: вернуться к последней контрольной точке или начать забег с первой кухни. Новый забег сбросит осколки и способности.' : 'Выбери, как продолжить: повторить этот этап или начать забег с первой кухни. Новый забег сбросит осколки и способности.', canResume ? 'С КОНТРОЛЬНОЙ ТОЧКИ' : 'ПОВТОРИТЬ ЭТАП', () => startLevel(levelIndex, canResume));
+    if (returnToTitleButton) {
+      returnToTitleButton.hidden = false;
+      returnToTitleButton.textContent = 'НАЧАТЬ ЗАНОВО · С ПЕРВОЙ КУХНИ';
+      returnToTitleButton.onclick = restartCampaign;
+    }
   }
 
   function finishGame() {
