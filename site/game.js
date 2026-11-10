@@ -416,7 +416,7 @@
     sauceRushMaxTime = 0;
     perfectDodgeTime = 0;
     counterTime = 0;
-    totalEnemies = stage.finale ? 0 : Array.from({ length: stage.waves }, (_, i) => 4 + levelIndex + i).reduce((sum, count) => sum + count, 0);
+    totalEnemies = stage.finale ? 0 : Array.from({ length: stage.waves }, (_, i) => levelIndex === 0 ? 3 + i : 4 + levelIndex + i).reduce((sum, count) => sum + count, 0);
     bossSpawned = false;
     bossIntro = 0;
     hazards = [];
@@ -1756,7 +1756,22 @@
         toast = calls[streakKills];
         toastTime = 1.5;
       }
-      if (enemy.elite || enemiesDefeated % 4 === 0) drops.push({ x: enemy.x, y: enemy.y - 24, life: 8, amount: enemy.elite ? 26 : 18, elite: enemy.elite });
+      const lastEnemyBeforeBoss = !levels[levelIndex].finale && enemiesDefeated >= totalEnemies;
+      const guaranteedMedkit = enemiesDefeated === 2 || enemiesDefeated === 3 || lastEnemyBeforeBoss;
+      if (enemy.elite || (enemiesDefeated % 4 === 0 && !guaranteedMedkit)) drops.push({ x: clamp(enemy.x + (guaranteedMedkit ? (enemy.x < player.x ? -34 : 34) : 0), 42, worldWidth - 42), y: enemy.y - 24, life: 8, amount: enemy.elite ? 26 : 18, elite: enemy.elite });
+      if (guaranteedMedkit) {
+        drops.push({ type: 'medkit', fullRestore: lastEnemyBeforeBoss, x: enemy.x, y: enemy.y - 32, life: lastEnemyBeforeBoss ? 60 : 30, amount: lastEnemyBeforeBoss ? player.maxHp : Math.ceil(player.maxHp * 0.32), elite: false });
+        if (lastEnemyBeforeBoss) {
+          toast = 'ПОСЛЕДНЯЯ ХИЛКА · ПЕРЕД БОССОМ';
+          toastTime = 2.2;
+          announce('Последняя хилка перед боссом. Подбери её, чтобы полностью восстановить здоровье.');
+        } else {
+          toast = 'ХИЛКА ВЫПАЛА · ПОДБЕРИ';
+          toastTime = 1.5;
+          announce('Выпала хилка. Подбери её, чтобы восстановить здоровье.');
+        }
+        sound('pickup');
+      }
       const secretRecipe = gameState.runKills >= 19 && !gameState.secretSeen;
       if (secretRecipe) {
         gameState.secretSeen = true;
@@ -1775,9 +1790,9 @@
       announce(`Секретный рецепт XARIZMA19. Максимум здоровья увеличен до ${player.maxHp}. Восстановлено ${restored} здоровья.`);
       } else if (!enemies.some(other => other.alive)) {
         const lastWave = waveIndex + 1 >= levels[levelIndex].waves;
-        toast = lastWave ? 'ПУТЬ К БОССУ ОТКРЫТ' : `ВОЛНА ${waveIndex + 1} ЗАЧИЩЕНА · ДВИГАЙСЯ ДАЛЬШЕ`;
+        toast = lastWave ? lastEnemyBeforeBoss ? 'ХИЛКА ПОЛНОГО HP · ЗАБЕРИ ПЕРЕД БОССОМ' : 'ПУТЬ К БОССУ ОТКРЫТ' : `ВОЛНА ${waveIndex + 1} ЗАЧИЩЕНА · ДВИГАЙСЯ ДАЛЬШЕ`;
         toastTime = 1.8;
-      announce(lastWave ? 'Все волны зачищены. Путь к боссу открыт.' : `Волна ${waveIndex + 1} зачищена. Двигайся дальше.`);
+      announce(lastWave ? lastEnemyBeforeBoss ? 'Все волны зачищены. Перед боссом выпала полная хилка. Подбери её, чтобы восстановить здоровье.' : 'Все волны зачищены. Путь к боссу открыт.' : `Волна ${waveIndex + 1} зачищена. Двигайся дальше.`);
       } else if (enemiesDefeated % 8 === 0) {
         const quips = ['СЕКРЕТНЫЙ ИНГРЕДИЕНТ: ДЕРЗОСТЬ', 'ПОВАР НЕ ВИДЕЛ ЭТОГО', 'ЗАПИШЕМ В КУХОННЫЕ РАСХОДЫ'];
         toast = quips[Math.floor(Math.random() * quips.length)];
@@ -2278,9 +2293,10 @@
       const pullX = player.x - drop.x;
       const pullY = player.y - 24 - drop.y;
       const distance = Math.hypot(pullX, pullY);
-      drop.magnetized = player.hp < player.maxHp && distance < 180 && Math.abs(pullY) < 105;
+      const magnetRange = drop.fullRestore ? 700 : drop.type === 'medkit' ? 235 : 180;
+      drop.magnetized = player.hp < player.maxHp && distance < magnetRange && Math.abs(pullY) < (drop.fullRestore ? 170 : 105);
       if (drop.magnetized && distance > 0.01) {
-        const speed = 300 + (180 - Math.min(distance, 180)) * 0.55;
+        const speed = 300 + (magnetRange - Math.min(distance, magnetRange)) * 0.55;
         const step = Math.min(distance, speed * dt);
         drop.x += pullX / distance * step;
         drop.y += pullY / distance * step;
@@ -2291,9 +2307,10 @@
         if (restored > 0) spawnDamageNumber(player.x, player.y - 124, restored, false, false, false, true, true);
         drop.life = 0;
         burst(drop.x, drop.y, drop.elite ? '#ffd17b' : '#ff5348', drop.elite ? 14 : 9);
-        toast = restored > 0 ? `СОУС +${restored}` : 'ЗДОРОВЬЕ ПОЛНО';
-        toastTime = 0.8;
-      announce(restored > 0 ? `Подобран соус. Восстановлено ${restored} здоровья.` : 'Подобран соус. Здоровье уже полное.');
+        const medkit = drop.type === 'medkit';
+        toast = restored > 0 ? `${medkit ? 'ХИЛКА' : 'СОУС'} +${restored}${player.hp >= player.maxHp ? ' · HP ПОЛНО' : ''}` : 'ЗДОРОВЬЕ ПОЛНО';
+        toastTime = medkit ? 1.5 : 0.8;
+        announce(restored > 0 ? `Подобрана ${medkit ? 'хилка' : 'порция соуса'}. Восстановлено ${restored} здоровья${player.hp >= player.maxHp ? ', здоровье полностью восстановлено' : ''}.` : 'Здоровье уже полное.');
         if (restored > 0) sound('pickup');
       }
     }
@@ -3085,29 +3102,39 @@
   }
 
   function drawDrop(drop) {
+    const medkit = drop.type === 'medkit';
     const pulse = prefersReducedMotion ? 1 : 0.86 + Math.sin(time * 8 + drop.x) * 0.14;
     ctx.save();
     ctx.globalAlpha = Math.min(1, drop.life) * pulse;
     if (drop.magnetized && !prefersReducedMotion) {
       ctx.save();
       ctx.globalAlpha *= 0.42;
-      ctx.strokeStyle = drop.elite ? '#ffd17b' : '#ff9b72';
+      ctx.strokeStyle = medkit ? '#a8f4bf' : drop.elite ? '#ffd17b' : '#ff9b72';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([2, 5]);
       ctx.lineDashOffset = -time * 12;
       ctx.beginPath(); ctx.moveTo(drop.x, drop.y); ctx.lineTo(player.x, player.y - 24); ctx.stroke();
       ctx.restore();
     }
-    if (drop.elite) {
-      ctx.strokeStyle = '#ffd17b'; ctx.lineWidth = 1.5;
+    if (drop.elite || medkit) {
+      ctx.strokeStyle = medkit ? '#a8f4bf' : '#ffd17b'; ctx.lineWidth = 1.5;
       const ring = prefersReducedMotion ? 14 : 14 + Math.sin(time * 7) * 2;
       ctx.beginPath(); ctx.ellipse(drop.x, drop.y, ring, ring + 3, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    ctx.fillStyle = drop.elite ? '#ffc65b' : '#ff433b';
-    ctx.shadowColor = drop.elite ? '#ffc65b' : '#ff433b'; ctx.shadowBlur = drop.elite ? 16 : 8;
-    drawSauceDrop(drop.x, drop.y, drop.elite ? 8 : 7, drop.elite);
-    ctx.shadowBlur = 0;
-    text('+', drop.x, drop.y + 5, 8, '#fff2d5', 'center', 950);
+    if (medkit) {
+      ctx.fillStyle = '#154b37'; ctx.strokeStyle = '#c9ffdb'; ctx.lineWidth = 2;
+      ctx.shadowColor = '#8ff0ad'; ctx.shadowBlur = 18;
+      ctx.beginPath(); ctx.arc(drop.x, drop.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.fillStyle = '#edfff2';
+      ctx.fillRect(drop.x - 2.2, drop.y - 6, 4.4, 12); ctx.fillRect(drop.x - 6, drop.y - 2.2, 12, 4.4);
+      text('ХИЛКА', drop.x, drop.y - 16, 6, '#c9ffdb', 'center', 950);
+    } else {
+      ctx.fillStyle = drop.elite ? '#ffc65b' : '#ff433b';
+      ctx.shadowColor = drop.elite ? '#ffc65b' : '#ff433b'; ctx.shadowBlur = drop.elite ? 16 : 8;
+      drawSauceDrop(drop.x, drop.y, drop.elite ? 8 : 7, drop.elite);
+      ctx.shadowBlur = 0;
+      text('+', drop.x, drop.y + 5, 8, '#fff2d5', 'center', 950);
+    }
     ctx.restore();
   }
 
