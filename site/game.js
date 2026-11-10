@@ -1541,7 +1541,7 @@
     if (interactiveTarget && (interactiveTarget.matches('input,select,textarea,[contenteditable="true"]') || ['enter', ' '].includes(key))) return;
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) event.preventDefault();
     if (key === 'm' && !event.repeat) toggleMusic();
-    if ((key === 'j' || key === 'z') && !event.repeat) attack();
+    if (key === 'j' || key === 'z') attack();
     if (key === 'k' || key === 'x') dash();
     if (key === 'l') whip();
     if (key === 'i') heavyPunch();
