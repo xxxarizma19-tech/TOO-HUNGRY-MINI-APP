@@ -1541,7 +1541,7 @@
     if (interactiveTarget && (interactiveTarget.matches('input,select,textarea,[contenteditable="true"]') || ['enter', ' '].includes(key))) return;
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) event.preventDefault();
     if (key === 'm' && !event.repeat) toggleMusic();
-    if (key === 'j' || key === 'z') attack();
+    if ((key === 'j' || key === 'z') && !event.repeat) attack();
     if (key === 'k' || key === 'x') dash();
     if (key === 'l') whip();
     if (key === 'i') heavyPunch();
@@ -3049,6 +3049,19 @@
       ctx.beginPath(); ctx.ellipse(hazard.x, hazard.y, 34, 15, 0, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#ffbd83'; ctx.lineWidth = 2; ctx.stroke();
     }
+    const warning = hazard.life > 0.62;
+    const warningProgress = prefersReducedMotion ? 0.72 : clamp((1.05 - hazard.life) / 0.43, 0, 1);
+    ctx.globalAlpha = warning ? 0.42 : 0.92;
+    ctx.strokeStyle = warning ? '#fff0bd' : '#fff8e5';
+    ctx.lineWidth = warning ? 1.5 : 2.5;
+    ctx.lineCap = 'round';
+    ctx.setLineDash(warning ? [3, 5] : []);
+    ctx.beginPath(); ctx.arc(hazard.x, hazard.y, 43, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = warning ? 0.88 : 1;
+    ctx.strokeStyle = warning ? '#ffe7a7' : '#fff8d8';
+    ctx.lineWidth = warning ? 2 : 3;
+    ctx.beginPath(); ctx.arc(hazard.x, hazard.y, 43, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * warningProgress); ctx.stroke();
     ctx.restore();
   }
 
