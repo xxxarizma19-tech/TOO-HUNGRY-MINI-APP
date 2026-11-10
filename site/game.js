@@ -1699,6 +1699,7 @@
   function hurtEnemy(enemy, damage) {
     if (!enemy.alive) return null;
     const blocked = enemy.type === 'garlic' && enemy.guarding > 0;
+    const finisherHit = !blocked && player.attackPose === 'punch' && player.attackCombo === 3;
     if (blocked) {
       damage = Math.max(4, Math.round(damage * 0.22));
       burst(enemy.x + enemy.face * 28, enemy.y - 45, '#f4d6a3', 5);
@@ -1718,7 +1719,8 @@
       haptic('medium');
     }
     const defeatColors = { garlic: '#efd4a0', tomato: '#fa624c', mozzarella: '#fff0ce', pepper: '#a9cb77' };
-    burst(enemy.x, enemy.y - 26, enemy.elite ? '#ffd17b' : defeatColors[enemy.type], enemy.hp <= 0 ? enemy.elite ? 20 : 12 : 8);
+    burst(enemy.x, enemy.y - 26, finisherHit ? '#ffcf78' : enemy.elite ? '#ffd17b' : defeatColors[enemy.type], finisherHit ? enemy.hp <= 0 ? 24 : 15 : enemy.hp <= 0 ? enemy.elite ? 20 : 12 : 8);
+    if (finisherHit) shake = Math.max(shake, 4.2);
     if (enemy.hp <= 0) {
       enemy.alive = false;
       enemiesDefeated++;
