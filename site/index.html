@@ -115,6 +115,7 @@
     .mobile-controls .jump { border-color:#e3b778; color:#ffd49b; }
     .mobile-controls button[data-press="jump"]::after { opacity:.42; }
     .mobile-controls .utility { width:46px; height:46px; font-size:clamp(7px,1.6vw,9px); letter-spacing:-.025em; }
+    .mobile-controls button[data-press="bomb"] { border-color:#c5e884; color:#e2f5ac; }
     .mobile-controls button[data-press] { position:relative; overflow:visible; }
     .mobile-controls button[data-press]::after { content:""; position:absolute; inset:-4px; border-radius:50%; background:conic-gradient(from -90deg,#ffd08a var(--charge-angle,360deg),transparent 0deg); -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1px)); mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1px)); pointer-events:none; opacity:.84; }
     .mobile-controls button.is-locked { filter:saturate(.35); opacity:.54; }
@@ -157,12 +158,12 @@
           <button id="returnToTitleButton" class="secondary-action" type="button" hidden>В МЕНЮ ЭТАПОВ</button>
           <div id="saveTransfer" class="save-transfer" hidden><button id="exportSaveButton" type="button">СКАЧАТЬ СОХРАНЕНИЕ</button><button id="importSaveButton" type="button">ЗАГРУЗИТЬ ФАЙЛ</button><input id="saveFileInput" type="file" accept="application/json,.json" hidden></div>
           <p id="saveTransferHint" class="save-transfer-hint" hidden>Перенеси прохождение между Telegram и браузером через файл сохранения.</p>
-          <div class="hint" id="controlHint">4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · M (Ь) — музыка · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст</div>
+          <div class="hint" id="controlHint">4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · V (М) — бомба · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст · RB бомба</div>
         </div>
       </div>
       <div class="mobile-controls" id="mobileControls" role="group" aria-label="Сенсорное управление">
         <div class="pad" role="group" aria-label="Движение по арене"><button data-hold="left" aria-label="Влево">←</button><button data-hold="right" aria-label="Вправо">→</button><button data-hold="up" aria-label="Вверх по арене">↑</button><button data-hold="down" aria-label="Вниз по арене">↓</button></div>
-        <div class="actions" role="group" aria-label="Атаки и способности"><button class="jump" data-press="jump" aria-label="Прыжок">↑</button><button class="utility" data-press="whip" aria-label="Хлыст">ХЛЫСТ</button><button class="utility" data-press="heavy" aria-label="Тяжёлый удар">ТЯЖ</button><button class="hit" data-press="attack" aria-label="Удар. Удерживайте для серии ударов" title="Удерживай для серии ударов">УДАР</button><button class="dash" data-press="dash" aria-label="Рывок">РЫВОК</button></div>
+        <div class="actions" role="group" aria-label="Атаки и способности"><button class="jump" data-press="jump" aria-label="Прыжок">↑</button><button class="utility" data-press="whip" aria-label="Хлыст">ХЛЫСТ</button><button class="utility" data-press="heavy" aria-label="Тяжёлый удар">ТЯЖ</button><button class="hit" data-press="attack" aria-label="Удар. Удерживайте для серии ударов" title="Удерживай для серии ударов">УДАР</button><button class="dash" data-press="dash" aria-label="Рывок">РЫВОК</button><button class="utility" data-press="bomb" aria-label="Бросить перечную бомбу">БОМБА ×1</button></div>
       </div>
     </section>
     <div class="footer"><span>5 этапов · 4 босса · прогресс сохраняется в браузере</span><button id="handednessToggle" class="handedness-toggle" type="button" aria-pressed="false" aria-label="Атаки справа, движение слева">АТАКА СПРАВА</button><span>XARIZMA19 · ORIGINAL ALBUM</span></div>

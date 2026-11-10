@@ -53,9 +53,9 @@
   const compactHudResizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(updateCompactHudScale) : null;
   compactHudResizeObserver?.observe(canvas);
   const telegramApp = window.Telegram?.WebApp;
-  const desktopControlHint = '4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · M (Ь) — музыка · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст · Start пауза · меню: крестовина + A';
-  const touchControlHint = 'Слева — движение и кнопка паузы · справа — прыжок и атаки<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Кольца показывают готовность способностей';
-  const leftHandedTouchControlHint = 'Справа — движение и кнопка паузы · слева — прыжок и атаки<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Кольца показывают готовность способностей';
+  const desktopControlHint = '4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · V (М) — перечная бомба · M (Ь) — музыка · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст · RB бомба · Start пауза';
+  const touchControlHint = 'Слева — движение и кнопка паузы · справа — прыжок, атаки и бомба<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Подбирай перечные бомбы: они оглушают группу врагов';
+  const leftHandedTouchControlHint = 'Справа — движение и кнопка паузы · слева — прыжок, атаки и бомба<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Подбирай перечные бомбы: они оглушают группу врагов';
   let leftHandedControls = false;
   try { leftHandedControls = localStorage.getItem('tooHungryLeftHanded') === 'true'; } catch { /* The layout preference can stay session-only if storage is blocked. */ }
   function syncHandednessToggle() {
@@ -221,7 +221,7 @@
   let gameState = loadProgress();
   let musicEnabled = gameState.musicEnabled !== false;
   let levelIndex = Math.min(gameState.maxLevel, levels.length - 1);
-  let player, enemies, boss, hazards, particles, drops, damageNumbers = [], finaleObstacles = [], dashStains = [];
+  let player, enemies, boss, hazards, particles, drops, thrownItems = [], damageNumbers = [], finaleObstacles = [], dashStains = [];
   let cameraX = 0, worldWidth = W, waveIndex = -1, nextWaveAt = 620, fightGate = 0, wavesCleared = 0, enemiesDefeated = 0, totalEnemies = 0, waveQueue = [], waveKills = 0, waveReinforcementAt = 0, bossSpawned = false, bossIntro = 0;
   let running = false, playerMoving = false, time = 0, lastTime = 0, shake = 0, hitStop = 0, toast = '', toastTime = 0, stageIntroTime = 0, saveTimer = 0, streakKills = 0, streakTime = 0, sauceRushTime = 0, sauceRushMaxTime = 0, perfectDodgeTime = 0, counterTime = 0, attractAnimationFrame = 0, attractStartedAt = 0;
   let cutscene = null, pendingBossVictory = null;
@@ -374,7 +374,7 @@
 
   function newPlayer() {
     const maxHp = gameState.secretSeen ? 119 : 100;
-    return { x: 145, y: 420, z: 0, vz: 0, jumpBuffer: 0, coyoteTime: 0, landingFx: 0, hp: maxHp, hpTrail: maxHp, maxHp, face: 1, attack: 0, attackPose: '', attackDuration: 0, attackCooldown: 0, dash: 0, dashCooldown: 0, whipCooldown: 0, heavyCooldown: 0, invuln: 0, dodgeReady: false, combo: 0, attackCombo: 0, comboTime: 0, finisher: 0, walk: 0, stepCooldown: 0, hurt: 0 };
+    return { x: 145, y: 420, z: 0, vz: 0, jumpBuffer: 0, coyoteTime: 0, landingFx: 0, hp: maxHp, hpTrail: maxHp, maxHp, face: 1, attack: 0, attackPose: '', attackDuration: 0, attackCooldown: 0, dash: 0, dashCooldown: 0, whipCooldown: 0, heavyCooldown: 0, throwables: 1, throwCooldown: 0, invuln: 0, dodgeReady: false, combo: 0, attackCombo: 0, comboTime: 0, finisher: 0, walk: 0, stepCooldown: 0, hurt: 0 };
   }
 
   function startLevel(index, resume = false) {
@@ -416,13 +416,14 @@
     sauceRushMaxTime = 0;
     perfectDodgeTime = 0;
     counterTime = 0;
-    totalEnemies = stage.finale ? 0 : Array.from({ length: stage.waves }, (_, i) => levelIndex === 0 ? 3 + i : 4 + levelIndex + i).reduce((sum, count) => sum + count, 0);
+    totalEnemies = stage.finale ? 0 : Array.from({ length: stage.waves }, (_, i) => 4 + levelIndex + Math.min(1, i)).reduce((sum, count) => sum + count, 0);
     bossSpawned = false;
     bossIntro = 0;
     hazards = [];
     particles = [];
     dashStains = [];
     drops = [];
+    thrownItems = [];
     damageNumbers = [];
     finaleObstacles = stage.finale ? [780, 1510, 2260, 3020].map((x, i) => ({ x, cleared: i < (checkpoint?.obstacles ?? 0) })) : [];
     time = 0;
@@ -640,6 +641,16 @@
       case 'finaleLaunch': tone(230, 720, 0.32, 'sine', 0.075); noise(0.11, 0.045, 2100, 0.08); break;
       case 'finaleImpact': noise(0.22, 0.18, 1050); tone(185, 58, 0.34, 'triangle', 0.17); tone(690, 1040, 0.42, 'sine', 0.06, 0.13); break;
       case 'introSplash': noise(0.18, 0.12, 1250); tone(245, 78, 0.24, 'triangle', 0.11); tone(720, 460, 0.2, 'sine', 0.045, 0.035); break;
+      case 'introJar': tone(920, 560, 0.16, 'sine', 0.055); tone(1220, 880, 0.11, 'triangle', 0.035, 0.06); break;
+      case 'introPour': noise(0.55, 0.045, 820); tone(180, 125, 0.5, 'sine', 0.035); break;
+      case 'introWhistle': tone(1100, 1680, 0.2, 'sine', 0.06); tone(1580, 980, 0.26, 'triangle', 0.045, 0.11); break;
+      case 'introWake': [440, 660, 880].forEach((note, i) => tone(note, note * 1.12, 0.2, 'sine', 0.055, i * 0.09)); break;
+      case 'introStep': tone(155, 72, 0.09, 'triangle', 0.06); noise(0.045, 0.04, 760, 0.015); break;
+      case 'introSting': [392, 494, 659, 784].forEach((note, i) => tone(note, note * 1.025, 0.48, 'sine', 0.052, i * 0.095)); break;
+      case 'bombPickup': [520, 760, 1010].forEach((note, i) => tone(note, note * 1.18, 0.12, 'triangle', 0.065, i * 0.065)); break;
+      case 'bombThrow': noise(0.12, 0.09, 1900); tone(390, 170, 0.18, 'triangle', 0.09); break;
+      case 'bombBurst': noise(0.28, 0.19, 1500); tone(130, 42, 0.42, 'sine', 0.2); tone(680, 260, 0.26, 'sawtooth', 0.07, 0.025); break;
+      case 'enemyStun': tone(920, 470, 0.13, 'sine', 0.055); tone(640, 980, 0.15, 'triangle', 0.04, 0.07); break;
       case 'victory': [523, 659, 784].forEach((note, i) => tone(note, note * 1.15, 0.34, 'sine', 0.09, i * 0.09)); break;
     }
   }
@@ -1033,6 +1044,7 @@
     }
     const shouldSkip = [0, 1, 9].some(index => pressed.has(index) && !cutsceneGamepadPressed.has(index));
     cutsceneGamepadPressed = pressed;
+    if (shouldSkip && cutscene?.awaitingStart) { startCutsceneWithSound(); return false; }
     return shouldSkip;
   }
 
@@ -1042,11 +1054,20 @@
     prepareCutsceneGamepad();
     [art.chef, art.chefPour, art.chefMiss].forEach(requestArt);
     preloadStageArt(0);
-    cutscene = { started: performance.now(), time: 0, splashCue: false };
+    cutscene = { started: 0, awaitingStart: true, time: 0, jarCue: false, pourCue: false, whistleCue: false, splashCue: false, wakeCue: false, stepOneCue: false, stepTwoCue: false, stingCue: false };
     document.body.classList.remove('playing');
     setOverlayVisible(false);
     canvas.focus({ preventScroll: true });
     scheduleCutsceneFrame();
+  }
+
+  function startCutsceneWithSound() {
+    if (!cutscene?.awaitingStart) return;
+    unlockAudio();
+    cutscene.awaitingStart = false;
+    cutscene.started = performance.now();
+    sound('introJar');
+    cutscene.jarCue = true;
   }
 
   function skipCutscene() {
@@ -1062,6 +1083,11 @@
   function cutsceneLoop(now) {
     if (!cutscene || cutscene.pausedAt) return;
     if (cutsceneSkipPressed()) { skipCutscene(); return; }
+    if (cutscene.awaitingStart) {
+      drawCutscene(0);
+      scheduleCutsceneFrame();
+      return;
+    }
     cutscene.time = (now - cutscene.started) / 1000;
     if (cutscene.mode === 'bossVictory') {
       const dt = Math.min(0.05, Math.max(0, (now - cutscene.lastFrame) / 1000));
@@ -1107,12 +1133,19 @@
       scheduleCutsceneFrame();
       return;
     }
-    if (!cutscene.splashCue && cutscene.time >= 6.1) {
+    if (!cutscene.jarCue && cutscene.time >= 0.55) { cutscene.jarCue = true; sound('introJar'); }
+    if (!cutscene.pourCue && cutscene.time >= 3.25) { cutscene.pourCue = true; sound('introPour'); }
+    if (!cutscene.whistleCue && cutscene.time >= 6.15) { cutscene.whistleCue = true; sound('introWhistle'); }
+    if (!cutscene.splashCue && cutscene.time >= 8.2) {
       cutscene.splashCue = true;
       sound('introSplash');
       haptic('soft');
     }
-    if (cutscene.time >= 12) { skipCutscene(); return; }
+    if (!cutscene.wakeCue && cutscene.time >= 9.15) { cutscene.wakeCue = true; sound('introWake'); }
+    if (!cutscene.stepOneCue && cutscene.time >= 10.45) { cutscene.stepOneCue = true; sound('introStep'); }
+    if (!cutscene.stepTwoCue && cutscene.time >= 11.25) { cutscene.stepTwoCue = true; sound('introStep'); }
+    if (!cutscene.stingCue && cutscene.time >= 14.35) { cutscene.stingCue = true; sound('introSting'); }
+    if (cutscene.time >= 18) { skipCutscene(); return; }
     drawCutscene(cutscene.time);
     scheduleCutsceneFrame();
   }
@@ -1122,26 +1155,26 @@
     if (background.complete && background.naturalWidth) ctx.drawImage(background, 0, 0, W, H);
     else { ctx.fillStyle = '#120d10'; ctx.fillRect(0, 0, W, H); }
     ctx.fillStyle = '#09070ab0'; ctx.fillRect(0, 0, W, H);
-    const cameraZoom = prefersReducedMotion ? 1 : 1 + clamp(seconds / 12, 0, 1) * 0.045;
-    const impactShake = !prefersReducedMotion && seconds >= 6.1 && seconds < 6.48 ? (1 - (seconds - 6.1) / 0.38) : 0;
+    const cameraZoom = prefersReducedMotion ? 1 : 1 + clamp(seconds / 18, 0, 1) * 0.055;
+    const impactShake = !prefersReducedMotion && seconds >= 8.2 && seconds < 8.62 ? (1 - (seconds - 8.2) / 0.42) : 0;
     const shakeX = impactShake * Math.sin(seconds * 73) * 4.5;
     const shakeY = impactShake * Math.cos(seconds * 61) * 2.5;
     ctx.save();
     ctx.translate(W / 2 + shakeX, H / 2 + shakeY);
     ctx.scale(cameraZoom, cameraZoom);
     ctx.translate(-W / 2, -H / 2);
-    const chef = seconds > 6.1 ? art.chefMiss : seconds > 2.1 ? art.chefPour : art.chef;
+    const chef = seconds > 8.2 ? art.chefMiss : seconds > 3.25 ? art.chefPour : art.chef;
     if (chef.complete && chef.naturalWidth) {
       const entrance = prefersReducedMotion ? 1 : Math.min(1, seconds / 1.2);
-      const reaction = !prefersReducedMotion && seconds > 6.1 && seconds < 7.2 ? Math.sin(seconds * 34) * 5 : 0;
+      const reaction = !prefersReducedMotion && seconds > 8.2 && seconds < 9.2 ? Math.sin(seconds * 34) * 5 : 0;
       ctx.save(); ctx.globalAlpha = entrance; ctx.translate((1 - entrance) * 150 + reaction, 0);
       ctx.drawImage(chef, 490, -28 + (prefersReducedMotion ? 0 : Math.sin(seconds * 2) * 2), 430, 645);
       ctx.restore();
     }
-    if (seconds < 2.1) drawSauceJar(662, 112, 0);
+    if (seconds < 3.25) drawSauceJar(662, 112, 0);
     drawCutscenePlate();
-    if (seconds > 2.25 && seconds < 6.1) {
-      const progress = Math.min(1, (seconds - 2.25) / 3.65);
+    if (seconds > 3.45 && seconds < 8.2) {
+      const progress = Math.min(1, (seconds - 3.45) / 4.75);
       const t = progress;
       const x = prefersReducedMotion ? 300 : (1-t)*(1-t)*520 + 2*(1-t)*t*470 + t*t*300;
       const y = prefersReducedMotion ? 433 : (1-t)*(1-t)*106 + 2*(1-t)*t*245 + t*t*433;
@@ -1151,14 +1184,14 @@
       }
       drawSauceDrop(x, y + (prefersReducedMotion ? 0 : Math.sin(seconds * 18) * 4), 12);
     }
-    if (seconds >= 6.1) {
-      const splash = prefersReducedMotion ? 0.78 : Math.max(0, 1 - (seconds - 6.1) * 1.2);
+    if (seconds >= 8.2) {
+      const splash = prefersReducedMotion ? 0.78 : Math.max(0, 1 - (seconds - 8.2) * 1.2);
       ctx.globalAlpha = splash;
       ctx.fillStyle = '#ed372f'; ctx.beginPath(); ctx.ellipse(300, 445, 34 + (1-splash)*36, 8 + (1-splash)*5, 0, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
-      if (seconds > 7.1) {
-        const run = prefersReducedMotion ? 0 : Math.min(1, (seconds - 7.1) / 2.8);
-        const heroX = prefersReducedMotion ? 430 : 294 + run * 300;
+      if (seconds > 9.2) {
+        const run = prefersReducedMotion ? 0 : Math.min(1, (seconds - 9.2) / 4.1);
+        const heroX = prefersReducedMotion ? 430 : 294 + run * 410;
         const hero = art.heroRun.complete && art.heroRun.naturalWidth ? art.heroRun : art.hero;
         if (hero.complete && hero.naturalWidth) {
           ctx.save(); ctx.translate(heroX, 460 + (prefersReducedMotion ? 0 : Math.sin(seconds * 16) * 4));
@@ -1168,14 +1201,14 @@
       }
     }
     ctx.restore();
-    const caption = seconds < 2.8 ? 'XARIZMA19 ГОТОВИТ ПОСЛЕДНИЙ ИНГРЕДИЕНТ' : seconds < 6.5 ? 'НО КАПЛЯ ПРОМАЗЫВАЕТ МИМО БЛЮДА…' : seconds < 9.6 ? 'КАПЛЯ ОЖИВАЕТ И РЕШАЕТ ДОБРАТЬСЯ САМА' : 'ЧЕТЫРЕ КУХНИ · ЧЕТЫРЕ БОССА · ОДНА ПОСЛЕДНЯЯ КАПЛЯ';
+    const caption = seconds < 3.2 ? 'XARIZMA19 ГОТОВИТ СВОЙ ФИРМЕННЫЙ СОУС TOO HUNGRY' : seconds < 6.3 ? 'ОДНА КАПЛЯ — И БЛЮДО СТАНЕТ ЛЕГЕНДОЙ…' : seconds < 8.2 ? 'ОЙ. КАПЛЯ ЛЕТИТ МИМО!' : seconds < 9.2 ? 'ТИШИНА. А ПОТОМ — ПЕРВОЕ ДВИЖЕНИЕ.' : seconds < 14 ? 'КАПЛЯ ОЖИЛА. И ДОБЕРЁТСЯ ДО БЛЮДА САМА.' : 'ЧЕТЫРЕ КУХНИ · ЧЕТЫРЕ БОССА · ОДНА ПОСЛЕДНЯЯ КАПЛЯ';
     announce(caption);
     rounded(52, 32, 482, 35, 4, '#100d10d9');
     text('XARIZMA19  /  TOO HUNGRY', 69, 54, 10, '#ff806c', 'left', 900);
     rounded(52, 462, 620, 46, 5, '#100d10e8');
     ctx.strokeStyle = '#743b38'; ctx.strokeRect(52.5, 462.5, 619, 45);
     text(caption, 72, 491, 11, '#fff0df', 'left', 900);
-    text('A / B / START / ENTER / SPACE / TAP — ПРОПУСТИТЬ', 928, 520, 8, '#f0d7c1', 'right', 700);
+    text(cutscene?.awaitingStart ? 'ENTER / SPACE / TAP — НАЧАТЬ СО ЗВУКОМ' : 'A / B / START / ENTER / SPACE / TAP — ПРОПУСТИТЬ', 928, 520, 8, '#f0d7c1', 'right', 700);
   }
 
   function drawEnding(seconds) {
@@ -1516,9 +1549,13 @@
     ctx.fillStyle = '#fff4df'; ctx.beginPath(); ctx.ellipse(x-size*0.22, y-size*0.05, size*0.2, size*0.38, -0.35, 0, Math.PI*2); ctx.fill();
   }
 
-  const physicalKeys = { KeyA:'a', KeyW:'w', KeyD:'d', KeyS:'s', KeyJ:'j', KeyZ:'z', KeyK:'k', KeyX:'x', KeyL:'l', KeyI:'i', KeyM:'m', KeyP:'p', Space:' ', Enter:'enter', Escape:'escape', ArrowUp:'arrowup', ArrowDown:'arrowdown', ArrowLeft:'arrowleft', ArrowRight:'arrowright' };
+  const physicalKeys = { KeyA:'a', KeyW:'w', KeyD:'d', KeyS:'s', KeyJ:'j', KeyZ:'z', KeyK:'k', KeyX:'x', KeyL:'l', KeyI:'i', KeyM:'m', KeyV:'v', KeyP:'p', Space:' ', Enter:'enter', Escape:'escape', ArrowUp:'arrowup', ArrowDown:'arrowdown', ArrowLeft:'arrowleft', ArrowRight:'arrowright' };
   const keyFromEvent = event => physicalKeys[event.code] || event.key.toLowerCase();
-  canvas.addEventListener('pointerdown', () => { if (cutscene) skipCutscene(); });
+  canvas.addEventListener('pointerdown', () => {
+    if (!cutscene) return;
+    if (cutscene.awaitingStart) startCutsceneWithSound();
+    else skipCutscene();
+  });
   const pauseButton = document.querySelector('#pauseButton');
   pauseButton.title = 'Пауза · P / З / Esc';
   pauseButton.addEventListener('click', pauseGame);
@@ -1540,7 +1577,13 @@
       event.preventDefault();
       return;
     }
-    if (cutscene) { if (['escape', 'enter', ' '].includes(key)) skipCutscene(); return; }
+    if (cutscene) {
+      if (['escape', 'enter', ' '].includes(key)) {
+        if (cutscene.awaitingStart) startCutsceneWithSound();
+        else skipCutscene();
+      }
+      return;
+    }
     if (running && (key === 'escape' || key === 'p')) { event.preventDefault(); pauseGame(); return; }
     const interactiveTarget = event.target instanceof Element ? event.target.closest('button,a[href],input,select,textarea,summary,[contenteditable="true"]') : null;
     if (interactiveTarget && (interactiveTarget.matches('input,select,textarea,[contenteditable="true"]') || ['enter', ' '].includes(key))) return;
@@ -1550,6 +1593,7 @@
     if (key === 'k' || key === 'x') dash();
     if (key === 'l') whip();
     if (key === 'i') heavyPunch();
+    if (key === 'v' && !event.repeat) throwPepperBomb();
     if (key === ' ' && !event.repeat) jump();
     if (!running && overlay.style.display !== 'grid' && key === 'enter') {
       event.preventDefault();
@@ -1588,6 +1632,7 @@
       if (action === 'jump') jump();
       if (action === 'whip') whip();
       if (action === 'heavy') heavyPunch();
+      if (action === 'bomb') throwPepperBomb();
     });
     button.addEventListener('pointerup', release);
     button.addEventListener('pointercancel', release);
@@ -1758,6 +1803,7 @@
       }
       const lastEnemyBeforeBoss = !levels[levelIndex].finale && enemiesDefeated >= totalEnemies;
       const guaranteedMedkit = enemiesDefeated === 2 || enemiesDefeated === 3 || lastEnemyBeforeBoss;
+      const pepperBombDrop = !levels[levelIndex].finale && player.throwables < 3 && (enemiesDefeated === 4 || (enemy.type === 'pepper' && Math.random() < 0.38));
       if (enemy.elite || (enemiesDefeated % 4 === 0 && !guaranteedMedkit)) drops.push({ x: clamp(enemy.x + (guaranteedMedkit ? (enemy.x < player.x ? -34 : 34) : 0), 42, worldWidth - 42), y: enemy.y - 24, life: 8, amount: enemy.elite ? 26 : 18, elite: enemy.elite });
       if (guaranteedMedkit) {
         drops.push({ type: 'medkit', fullRestore: lastEnemyBeforeBoss, x: enemy.x, y: enemy.y - 32, life: lastEnemyBeforeBoss ? 60 : 30, amount: lastEnemyBeforeBoss ? player.maxHp : Math.ceil(player.maxHp * 0.32), elite: false });
@@ -1771,6 +1817,13 @@
           announce('Выпала хилка. Подбери её, чтобы восстановить здоровье.');
         }
         sound('pickup');
+      }
+      if (pepperBombDrop) {
+        drops.push({ type: 'pepperBomb', x: enemy.x + (enemy.x < player.x ? -24 : 24), y: enemy.y - 34, life: 35, amount: 1, elite: false });
+        toast = 'ПЕРЕЧНАЯ БОМБА · МОЖНО КИДАТЬ';
+        toastTime = 2;
+        announce('Подобрана перечная бомба. Бросай клавишей V или М, либо кнопкой «БОМБА» на телефоне. Она оглушает врагов рядом.');
+        sound('bombPickup');
       }
       const secretRecipe = gameState.runKills >= 19 && !gameState.secretSeen;
       if (secretRecipe) {
@@ -1895,6 +1948,7 @@
     if (levels[levelIndex].finale) updateFinale(dt);
     updateHazards(dt);
     updateDrops(dt);
+    updateThrownItems(dt);
     if (player.hp <= 0) loseLevel();
   }
 
@@ -1921,6 +1975,7 @@
     if (justPressed(2)) dash();
     if (justPressed(3)) heavyPunch();
     if (justPressed(4)) whip();
+    if (justPressed(5)) throwPepperBomb();
     gamepadPressed = currentButtons;
     const horizontal = gamepad.axes[0] || 0;
     const vertical = gamepad.axes[1] || 0;
@@ -1972,7 +2027,7 @@
   function spawnWave(index) {
     waveIndex = index;
     wavesCleared = index;
-    const amount = levelIndex === 0 ? 3 + index : 4 + levelIndex + index;
+    const amount = 4 + levelIndex + Math.min(1, index);
     const start = Math.max(540 + index * 1050, nextWaveAt - 160);
     const end = Math.min(worldWidth - 570, start + 760);
     fightGate = end + 110;
@@ -2080,7 +2135,11 @@
     const distance = Math.abs(dx);
     const depth = Math.abs(enemy.y - player.y);
     enemy.face = Math.sign(dx) || enemy.face;
-    if (enemy.state === 'tell') {
+    if (enemy.state === 'stunned') {
+      enemy.stateTime -= dt;
+      enemy.vx *= Math.pow(0.06, dt);
+      if (enemy.stateTime <= 0) enemy.state = 'idle';
+    } else if (enemy.state === 'tell') {
       enemy.stateTime -= dt;
       enemy.vx = 0;
       if (enemy.stateTime <= 0) {
@@ -2290,11 +2349,12 @@
   function updateDrops(dt) {
     for (const drop of drops) {
       drop.life -= dt;
+      const bombPickup = drop.type === 'pepperBomb';
       const pullX = player.x - drop.x;
       const pullY = player.y - 24 - drop.y;
       const distance = Math.hypot(pullX, pullY);
-      const magnetRange = drop.fullRestore ? 700 : drop.type === 'medkit' ? 235 : 180;
-      drop.magnetized = player.hp < player.maxHp && distance < magnetRange && Math.abs(pullY) < (drop.fullRestore ? 170 : 105);
+      const magnetRange = bombPickup ? 120 : drop.fullRestore ? 700 : drop.type === 'medkit' ? 235 : 180;
+      drop.magnetized = bombPickup ? player.throwables < 3 && distance < magnetRange && Math.abs(pullY) < 105 : player.hp < player.maxHp && distance < magnetRange && Math.abs(pullY) < (drop.fullRestore ? 170 : 105);
       if (drop.magnetized && distance > 0.01) {
         const speed = 300 + (magnetRange - Math.min(distance, magnetRange)) * 0.55;
         const step = Math.min(distance, speed * dt);
@@ -2302,6 +2362,18 @@
         drop.y += pullY / distance * step;
       }
       if (Math.abs(player.x - drop.x) < 32 && Math.abs(player.y - drop.y) < 50) {
+        if (bombPickup) {
+          if (player.throwables >= 3) continue;
+          player.throwables = Math.min(3, player.throwables + 1);
+          drop.life = 0;
+          burst(drop.x, drop.y, '#c6ed78', 12);
+          toast = `ПЕРЕЧНАЯ БОМБА ×${player.throwables} · V / М`;
+          toastTime = 1.8;
+          announce(`Перечная бомба подобрана. Осталось бросков: ${player.throwables}. Нажми V или М на клавиатуре, либо кнопку «БОМБА» на телефоне.`);
+          sound('bombPickup');
+          haptic('light');
+          continue;
+        }
         const restored = Math.min(drop.amount, player.maxHp - player.hp);
         player.hp += restored;
         if (restored > 0) spawnDamageNumber(player.x, player.y - 124, restored, false, false, false, true, true);
@@ -2315,6 +2387,62 @@
       }
     }
     drops = drops.filter(drop => drop.life > 0);
+  }
+
+  function throwPepperBomb() {
+    if (!running || player.throwables <= 0 || player.throwCooldown > 0) return;
+    player.throwables--;
+    player.throwCooldown = 0.48;
+    player.attackPose = 'throw';
+    player.attack = 0.24;
+    player.attackDuration = 0.24;
+    thrownItems.push({ x: player.x + player.face * 26, y: player.y - 54, vx: player.face * 390, vy: -245, life: 0.82, spin: 0, radius: 142 });
+    toast = `БРОСОК · ОСТАЛОСЬ ${player.throwables}`;
+    toastTime = 0.9;
+    sound('bombThrow');
+    haptic('light');
+  }
+
+  function updateThrownItems(dt) {
+    for (const item of thrownItems) {
+      item.life -= dt;
+      item.x += item.vx * dt;
+      item.y += item.vy * dt;
+      item.vy += 590 * dt;
+      item.spin += dt * 14;
+      if (item.life <= 0 && !item.exploded) {
+        item.exploded = true;
+        burst(item.x, item.y, '#c9ef83', 26);
+        burst(item.x, item.y, '#ffbd58', 16);
+        sound('bombBurst');
+        shake = Math.max(shake, 7);
+        let stunnedAny = false;
+        for (const enemy of enemies) {
+          if (!enemy.alive || Math.abs(enemy.x - item.x) > item.radius || Math.abs(enemy.y - item.y) > 100) continue;
+          hurtEnemy(enemy, enemy.elite ? 54 : 76);
+          if (enemy.alive) {
+            enemy.state = 'stunned';
+            enemy.stateTime = 1.35;
+            enemy.attackCooldown = Math.max(enemy.attackCooldown, 0.8);
+            enemy.vx = Math.sign(enemy.x - item.x || player.face) * 260;
+            burst(enemy.x, enemy.y - 48, '#d7f49a', 9);
+            stunnedAny = true;
+          }
+        }
+        if (stunnedAny) sound('enemyStun');
+        if (boss?.alive && bossIntro <= 0 && Math.abs(boss.x - item.x) < item.radius + 12 && Math.abs(boss.y - item.y) < 112) {
+          const damage = 54;
+          boss.hp -= damage;
+          boss.stun = Math.max(boss.stun, 0.72);
+          spawnDamageNumber(boss.x, boss.y - 150, damage, false, false, true);
+          burst(boss.x, boss.y - 64, '#d7f49a', 16);
+          sound('bossHit');
+          if (boss.hp <= 0) winBoss();
+        }
+      }
+    }
+    thrownItems = thrownItems.filter(item => !item.exploded);
+    player.throwCooldown = Math.max(0, player.throwCooldown - dt);
   }
 
   function updateFinale() {
@@ -2477,6 +2605,7 @@
     if (levels[levelIndex].finale) drawFinaleObstacles();
     for (const hazard of hazards) drawHazard(hazard);
     for (const drop of drops) drawDrop(drop);
+    for (const item of thrownItems) drawThrownItem(item);
     for (const enemy of enemies) if (enemy.alive) drawEnemy(enemy);
     if (boss?.alive) drawBoss();
     drawPlayer();
@@ -3103,25 +3232,35 @@
 
   function drawDrop(drop) {
     const medkit = drop.type === 'medkit';
+    const pepperBomb = drop.type === 'pepperBomb';
     const pulse = prefersReducedMotion ? 1 : 0.86 + Math.sin(time * 8 + drop.x) * 0.14;
     ctx.save();
     ctx.globalAlpha = Math.min(1, drop.life) * pulse;
     if (drop.magnetized && !prefersReducedMotion) {
       ctx.save();
       ctx.globalAlpha *= 0.42;
-      ctx.strokeStyle = medkit ? '#a8f4bf' : drop.elite ? '#ffd17b' : '#ff9b72';
+      ctx.strokeStyle = pepperBomb ? '#d8f29a' : medkit ? '#a8f4bf' : drop.elite ? '#ffd17b' : '#ff9b72';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([2, 5]);
       ctx.lineDashOffset = -time * 12;
       ctx.beginPath(); ctx.moveTo(drop.x, drop.y); ctx.lineTo(player.x, player.y - 24); ctx.stroke();
       ctx.restore();
     }
-    if (drop.elite || medkit) {
-      ctx.strokeStyle = medkit ? '#a8f4bf' : '#ffd17b'; ctx.lineWidth = 1.5;
+    if (drop.elite || medkit || pepperBomb) {
+      ctx.strokeStyle = pepperBomb ? '#d8f29a' : medkit ? '#a8f4bf' : '#ffd17b'; ctx.lineWidth = 1.5;
       const ring = prefersReducedMotion ? 14 : 14 + Math.sin(time * 7) * 2;
       ctx.beginPath(); ctx.ellipse(drop.x, drop.y, ring, ring + 3, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    if (medkit) {
+    if (pepperBomb) {
+      ctx.fillStyle = '#29421d'; ctx.strokeStyle = '#e0f6a5'; ctx.lineWidth = 2;
+      ctx.shadowColor = '#c6ed78'; ctx.shadowBlur = 16;
+      ctx.beginPath(); ctx.arc(drop.x, drop.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#ffe29a'; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(drop.x + 2, drop.y - 8); ctx.quadraticCurveTo(drop.x + 10, drop.y - 17, drop.x + 13, drop.y - 9); ctx.stroke();
+      ctx.fillStyle = '#fff1b2'; ctx.beginPath(); ctx.arc(drop.x + 13, drop.y - 10, 2.2 + Math.sin(time * 18) * 0.7, 0, Math.PI * 2); ctx.fill();
+      text('БОМБА', drop.x, drop.y - 18, 6, '#e8f8b7', 'center', 950);
+    } else if (medkit) {
       ctx.fillStyle = '#154b37'; ctx.strokeStyle = '#c9ffdb'; ctx.lineWidth = 2;
       ctx.shadowColor = '#8ff0ad'; ctx.shadowBlur = 18;
       ctx.beginPath(); ctx.arc(drop.x, drop.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -3135,6 +3274,20 @@
       ctx.shadowBlur = 0;
       text('+', drop.x, drop.y + 5, 8, '#fff2d5', 'center', 950);
     }
+    ctx.restore();
+  }
+
+  function drawThrownItem(item) {
+    ctx.save();
+    ctx.translate(item.x, item.y);
+    ctx.rotate(item.spin);
+    ctx.shadowColor = '#c6ed78'; ctx.shadowBlur = 16;
+    ctx.fillStyle = '#365527'; ctx.strokeStyle = '#e3f7a6'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffe29a'; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(2, -8); ctx.quadraticCurveTo(10, -17, 13, -9); ctx.stroke();
+    ctx.fillStyle = '#fff1b2'; ctx.beginPath(); ctx.arc(13, -10, 2.3, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
@@ -3340,11 +3493,18 @@
       attack: { remaining: player.attackCooldown, duration: 0.38, unlocked: true },
       dash: { remaining: player.dashCooldown, duration: 1, unlocked: gameState.dash },
       whip: { remaining: player.whipCooldown, duration: 1.05, unlocked: gameState.whip },
-      heavy: { remaining: player.heavyCooldown, duration: 1.35, unlocked: gameState.heavy }
+      heavy: { remaining: player.heavyCooldown, duration: 1.35, unlocked: gameState.heavy },
+      bomb: { remaining: player.throwCooldown, duration: 0.48, unlocked: player.throwables > 0 }
     };
     document.querySelectorAll('#mobileControls [data-press]').forEach(button => {
       const action = cooldowns[button.dataset.press];
       if (!action) return;
+      if (button.dataset.press === 'bomb') {
+        const label = `БОМБА ×${player.throwables}`;
+        const accessibleLabel = `Бросить перечную бомбу, осталось ${player.throwables}`;
+        if (button.textContent !== label) button.textContent = label;
+        if (button.getAttribute('aria-label') !== accessibleLabel) button.setAttribute('aria-label', accessibleLabel);
+      }
       const charge = Math.round(clamp(1 - action.remaining / action.duration, 0, 1) * 100) / 100;
       const angle = `${charge * 360}deg`;
       if (button.dataset.chargeAngle !== angle) {
@@ -3361,7 +3521,8 @@
       { key: 'J/О', name: 'УДАР', cooldown: player.attackCooldown, duration: 0.38 },
       gameState.dash && { key: 'K/Л', name: 'РЫВОК', cooldown: player.dashCooldown, duration: 1 },
       gameState.whip && { key: 'L/Д', name: 'ХЛЫСТ', cooldown: player.whipCooldown, duration: 1.05 },
-      gameState.heavy && { key: 'I/Ш', name: 'ТЯЖЁЛЫЙ', cooldown: player.heavyCooldown, duration: 1.35 }
+      gameState.heavy && { key: 'I/Ш', name: 'ТЯЖЁЛЫЙ', cooldown: player.heavyCooldown, duration: 1.35 },
+      { key: 'V/М', name: `БОМБА ×${player.throwables}`, cooldown: player.throwCooldown, duration: 0.48 }
     ].filter(Boolean);
     const width = 96;
     const gap = 5;
