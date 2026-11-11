@@ -450,7 +450,7 @@
   }
 
   function makeEnemy(x, type, elite = false) {
-    const baseHp = levelIndex === 0 ? 185 + Math.max(0, waveIndex) * 10 : 270 + levelIndex * 40 + Math.max(0, waveIndex) * 16;
+    const baseHp = levelIndex === 0 ? 105 + Math.max(0, waveIndex) * 8 : 145 + levelIndex * 22 + Math.max(0, waveIndex) * 10;
     const hp = Math.round(baseHp * (elite ? 1.5 : 1));
     return { x, y: 412 + Math.random() * 52, type, elite, enraged: false, hp, hpTrail: hp, maxHp: hp, alive: true, spawn: prefersReducedMotion ? 0 : 0.32, hit: 0, knockback: 0, timer: 0.7 + Math.random(), vx: 0, swing: Math.random() * 6, face: -1, state: 'idle', stateTime: 0, attackCooldown: (levelIndex === 0 ? 1.45 + Math.random() * 0.9 : 0.9 + Math.random() * 1.2) * (elite ? 0.82 : 1), guardCooldown: 1.2 + Math.random() * 2, guarding: 0 };
   }
@@ -649,6 +649,7 @@
       case 'introSting': [392, 494, 659, 784].forEach((note, i) => tone(note, note * 1.025, 0.48, 'sine', 0.052, i * 0.095)); break;
       case 'bombPickup': [520, 760, 1010].forEach((note, i) => tone(note, note * 1.18, 0.12, 'triangle', 0.065, i * 0.065)); break;
       case 'bombThrow': noise(0.12, 0.09, 1900); tone(390, 170, 0.18, 'triangle', 0.09); break;
+      case 'kick': noise(0.08, 0.12, 900); tone(180, 72, 0.16, 'triangle', 0.14); break;
       case 'bombBurst': noise(0.28, 0.19, 1500); tone(130, 42, 0.42, 'sine', 0.2); tone(680, 260, 0.26, 'sawtooth', 0.07, 0.025); break;
       case 'enemyStun': tone(920, 470, 0.13, 'sine', 0.055); tone(640, 980, 0.15, 'triangle', 0.04, 0.07); break;
       case 'victory': [523, 659, 784].forEach((note, i) => tone(note, note * 1.15, 0.34, 'sine', 0.09, i * 0.09)); break;
@@ -1155,6 +1156,7 @@
     if (background.complete && background.naturalWidth) ctx.drawImage(background, 0, 0, W, H);
     else { ctx.fillStyle = '#120d10'; ctx.fillRect(0, 0, W, H); }
     ctx.fillStyle = '#09070ab0'; ctx.fillRect(0, 0, W, H);
+    if (!prefersReducedMotion) { const light = ctx.createRadialGradient(478, 236, 30, 478, 236, 510); light.addColorStop(0, 'rgba(255,112,73,.12)'); light.addColorStop(1, 'rgba(8,4,8,0)'); ctx.fillStyle = light; ctx.fillRect(0,0,W,H); }
     const cameraZoom = prefersReducedMotion ? 1 : 1 + clamp(seconds / 18, 0, 1) * 0.055;
     const impactShake = !prefersReducedMotion && seconds >= 8.2 && seconds < 8.62 ? (1 - (seconds - 8.2) / 0.42) : 0;
     const shakeX = impactShake * Math.sin(seconds * 73) * 4.5;
@@ -1178,10 +1180,6 @@
       const t = progress;
       const x = prefersReducedMotion ? 300 : (1-t)*(1-t)*520 + 2*(1-t)*t*470 + t*t*300;
       const y = prefersReducedMotion ? 433 : (1-t)*(1-t)*106 + 2*(1-t)*t*245 + t*t*433;
-      if (!prefersReducedMotion) {
-        ctx.strokeStyle = '#ff4338'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.shadowColor = '#ff3d32'; ctx.shadowBlur = 14;
-        ctx.beginPath(); ctx.moveTo(520, 106); ctx.quadraticCurveTo(470, 245, x, y); ctx.stroke(); ctx.shadowBlur = 0;
-      }
       drawSauceDrop(x, y + (prefersReducedMotion ? 0 : Math.sin(seconds * 18) * 4), 12);
     }
     if (seconds >= 8.2) {
@@ -1233,10 +1231,6 @@
     const easedFlight = 1 - Math.pow(1 - flight, 3);
     const bounceTime = prefersReducedMotion ? 0 : Math.max(0, seconds - landingAt);
     const dropY = prefersReducedMotion ? 393 : -20 + easedFlight * 420 - Math.abs(Math.sin(bounceTime * 11)) * 23 * Math.exp(-bounceTime * 7);
-    if (!prefersReducedMotion && seconds > 1.2 && seconds < 5.2) {
-      ctx.strokeStyle = '#ff493e'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.shadowColor = '#ff372e'; ctx.shadowBlur = 16;
-      ctx.beginPath(); ctx.moveTo(792, 156); ctx.lineTo(482, dropY - 24); ctx.stroke(); ctx.shadowBlur = 0;
-    }
     if (seconds > 1.2 && seconds < 6) drawSauceDrop(482, dropY, 19);
     if (seconds >= landingAt) {
       const impact = prefersReducedMotion ? 0.42 : Math.max(0, 1 - bounceTime * 2.4);
@@ -1510,13 +1504,43 @@
 
   function drawCutscenePlate() {
     ctx.save();
-    ctx.fillStyle = '#0009'; ctx.beginPath(); ctx.ellipse(468, 454, 150, 18, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#e9dfd2'; ctx.beginPath(); ctx.ellipse(468, 423, 124, 24, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#6f3732'; ctx.beginPath(); ctx.ellipse(468, 419, 99, 14, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#f7e8d7'; ctx.beginPath(); ctx.ellipse(468, 416, 82, 10, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#d8a75d'; ctx.beginPath(); ctx.ellipse(458, 405, 64, 12, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#6d9b49'; ctx.beginPath(); ctx.ellipse(472, 399, 37, 8, -0.12, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#e84a39'; ctx.beginPath(); ctx.ellipse(442, 400, 21, 8, 0.18, 0, Math.PI * 2); ctx.fill();
+    // Restaurant-style ceramic platter, rendered as a top-down hero prop.
+    ctx.fillStyle = 'rgba(0,0,0,.42)';
+    ctx.beginPath(); ctx.ellipse(468, 454, 163, 21, 0, 0, Math.PI * 2); ctx.fill();
+    const porcelain = ctx.createLinearGradient(0, 386, 0, 458);
+    porcelain.addColorStop(0, '#fffaf0'); porcelain.addColorStop(.55, '#eee2d2'); porcelain.addColorStop(1, '#bcae9e');
+    ctx.fillStyle = porcelain; ctx.beginPath(); ctx.ellipse(468, 422, 145, 38, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff9ef'; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(468, 419, 128, 29, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(157,103,73,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(468, 419, 119, 23, 0, 0, Math.PI * 2); ctx.stroke();
+    // Roasted vegetables and herbs on the side of the steak.
+    ctx.fillStyle = '#496a39'; ctx.beginPath(); ctx.ellipse(546, 414, 25, 8, -.35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#78994e'; ctx.beginPath(); ctx.ellipse(552, 407, 17, 6, .35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#d9a64d'; ctx.beginPath(); ctx.ellipse(392, 417, 9, 7, -.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#bc6247'; ctx.beginPath(); ctx.ellipse(409, 414, 10, 7, .4, 0, Math.PI * 2); ctx.fill();
+    // Thick ribeye with a browned irregular crust and a warm, juicy center.
+    ctx.save(); ctx.translate(465, 402); ctx.rotate(-.07);
+    const steakPath = () => { ctx.beginPath(); ctx.moveTo(-71,-3); ctx.bezierCurveTo(-69,-20,-50,-25,-31,-21); ctx.bezierCurveTo(-11,-30,9,-24,23,-20); ctx.bezierCurveTo(44,-25,67,-15,70,-2); ctx.bezierCurveTo(76,12,57,21,38,19); ctx.bezierCurveTo(19,27,-1,20,-17,23); ctx.bezierCurveTo(-40,25,-63,16,-70,8); ctx.closePath(); };
+    ctx.shadowColor = '#341710'; ctx.shadowBlur = 7; ctx.fillStyle = '#4c211b'; steakPath(); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#e7a56e'; ctx.lineWidth = 4; steakPath(); ctx.stroke();
+    const meat = ctx.createLinearGradient(0,-24,0,24); meat.addColorStop(0,'#bd6847'); meat.addColorStop(.38,'#94432f'); meat.addColorStop(1,'#63271f');
+    ctx.fillStyle = meat; ctx.beginPath(); ctx.moveTo(-65,-3); ctx.bezierCurveTo(-61,-17,-45,-20,-29,-17); ctx.bezierCurveTo(-9,-24,9,-19,22,-16); ctx.bezierCurveTo(43,-21,61,-13,64,-2); ctx.bezierCurveTo(68,10,51,17,35,15); ctx.bezierCurveTo(17,22,-2,16,-17,19); ctx.bezierCurveTo(-39,21,-58,13,-64,7); ctx.closePath(); ctx.fill();
+    ctx.save(); steakPath(); ctx.clip();
+    ctx.strokeStyle = 'rgba(255,202,139,.85)'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+    for (const [x,y] of [[-52,-17],[-34,-21],[-16,-23],[2,-22],[21,-20],[40,-18],[56,-13],[-58,-4],[-41,-7],[-22,-9],[-3,-10],[16,-8],[35,-7],[53,-4],[-48,8],[-28,7],[-8,6],[12,7],[31,8],[48,10]]) { ctx.beginPath(); ctx.moveTo(x-6,y+5); ctx.lineTo(x+8,y-5); ctx.stroke(); }
+    ctx.restore();
+    // Herb butter melting over the center gives the meat a glossy highlight.
+    const butter = ctx.createRadialGradient(9,-5,1,9,-5,13); butter.addColorStop(0,'#fff0ad'); butter.addColorStop(.55,'#f2bc62'); butter.addColorStop(1,'rgba(217,139,50,0)');
+    ctx.fillStyle = butter; ctx.beginPath(); ctx.ellipse(9,-5,14,9,-.18,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#597442'; ctx.beginPath(); ctx.arc(8,-7,2,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(13,-3,1.5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    if (!prefersReducedMotion) {
+      for (let i=0;i<3;i++) {
+        const phase = time*1.5+i*2.1; const x=454+i*13; const rise=(phase%2.4)/2.4;
+        ctx.globalAlpha=.18*(1-rise); ctx.strokeStyle='#fff0d8'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(x,390-rise*24); ctx.bezierCurveTo(x-8,384-rise*24,x+8,379-rise*24,x,372-rise*24); ctx.stroke();
+      }
+      ctx.globalAlpha=1;
+    }
     ctx.restore();
   }
 
@@ -1803,10 +1827,10 @@
       }
       const lastEnemyBeforeBoss = !levels[levelIndex].finale && enemiesDefeated >= totalEnemies;
       const guaranteedMedkit = enemiesDefeated === 2 || enemiesDefeated === 3 || lastEnemyBeforeBoss;
-      const pepperBombDrop = !levels[levelIndex].finale && player.throwables < 3 && (enemiesDefeated === 4 || (enemy.type === 'pepper' && Math.random() < 0.38));
-      if (enemy.elite || (enemiesDefeated % 4 === 0 && !guaranteedMedkit)) drops.push({ x: clamp(enemy.x + (guaranteedMedkit ? (enemy.x < player.x ? -34 : 34) : 0), 42, worldWidth - 42), y: enemy.y - 24, life: 8, amount: enemy.elite ? 26 : 18, elite: enemy.elite });
+      const pepperBombDrop = false;
+      if (enemy.elite || (enemiesDefeated % 4 === 0 && !guaranteedMedkit)) drops.push({ x: clamp(enemy.x + (guaranteedMedkit ? (enemy.x < player.x ? -34 : 34) : 0), 42, worldWidth - 42), y: enemy.y - 24, life: 8, amount: enemy.elite ? 34 + levelIndex * 8 : 22 + levelIndex * 10, elite: enemy.elite });
       if (guaranteedMedkit) {
-        drops.push({ type: 'medkit', fullRestore: lastEnemyBeforeBoss, x: enemy.x, y: enemy.y - 32, life: lastEnemyBeforeBoss ? 60 : 30, amount: lastEnemyBeforeBoss ? player.maxHp : Math.ceil(player.maxHp * 0.32), elite: false });
+        drops.push({ type: 'medkit', fullRestore: lastEnemyBeforeBoss, x: enemy.x, y: enemy.y - 32, life: lastEnemyBeforeBoss ? 60 : 30, amount: lastEnemyBeforeBoss ? player.maxHp : Math.ceil(player.maxHp * Math.min(0.62, 0.32 + levelIndex * 0.07)), elite: false });
         if (lastEnemyBeforeBoss) {
           toast = 'ПОСЛЕДНЯЯ ХИЛКА · ПЕРЕД БОССОМ';
           toastTime = 2.2;
@@ -2027,7 +2051,7 @@
   function spawnWave(index) {
     waveIndex = index;
     wavesCleared = index;
-    const amount = 4 + levelIndex + Math.min(1, index);
+    const amount = 3 + levelIndex + Math.min(1, index);
     const start = Math.max(540 + index * 1050, nextWaveAt - 160);
     const end = Math.min(worldWidth - 570, start + 760);
     fightGate = end + 110;
@@ -2390,17 +2414,17 @@
   }
 
   function throwPepperBomb() {
-    if (!running || player.throwables <= 0 || player.throwCooldown > 0) return;
-    player.throwables--;
-    player.throwCooldown = 0.48;
-    player.attackPose = 'throw';
-    player.attack = 0.24;
-    player.attackDuration = 0.24;
-    thrownItems.push({ x: player.x + player.face * 26, y: player.y - 54, vx: player.face * 390, vy: -245, life: 0.82, spin: 0, radius: 142 });
-    toast = `БРОСОК · ОСТАЛОСЬ ${player.throwables}`;
-    toastTime = 0.9;
-    sound('bombThrow');
-    haptic('light');
+    if (!running || player.throwCooldown > 0) return;
+    player.throwCooldown = 0.72;
+    player.attackPose = 'kick';
+    player.attack = 0.32;
+    player.attackDuration = 0.32;
+    player.combo = 0; player.comboTime = 0;
+    const connected = hitTargets(118, 42, 48);
+    if (connected) { player.finisher = prefersReducedMotion ? 0.12 : 0.2; shake = Math.max(shake, 4); }
+    burst(player.x + player.face * 67, player.y - 35, '#ffbd68', connected ? 13 : 6);
+    toast = connected ? 'УДАР НОГОЙ!' : 'УДАР НОГОЙ'; toastTime = 0.55;
+    sound('kick'); haptic(connected ? 'medium' : 'light');
   }
 
   function updateThrownItems(dt) {
@@ -2895,6 +2919,21 @@
       ctx.scale(1 + punchPulse * 0.045 + hurtPulse * 0.035, 1 - punchPulse * 0.035 - hurtPulse * 0.075);
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
+    }
+    if (player.attack > 0 && player.attackPose === 'kick') {
+      const progress = clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1);
+      const snap = Math.sin(Math.PI * progress);
+      if (snap > 0.05) {
+        ctx.save(); ctx.translate(x + player.face * (34 + snap * 31), y - 31 - snap * 10); ctx.scale(player.face, 1);
+        ctx.rotate(-0.22 + progress * 0.32);
+        ctx.lineCap = 'round'; ctx.strokeStyle = '#351d22'; ctx.lineWidth = 13;
+        ctx.beginPath(); ctx.moveTo(-4, 15); ctx.lineTo(14 + snap * 13, 6); ctx.stroke();
+        const boot = ctx.createLinearGradient(0, -2, 30, 10); boot.addColorStop(0, '#ffb36e'); boot.addColorStop(.55, '#ed4d3e'); boot.addColorStop(1, '#8f202c');
+        ctx.fillStyle = boot; ctx.strokeStyle = '#ffe0ac'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.ellipse(21 + snap * 12, 5, 20, 10, -0.16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#fff0c5'; ctx.beginPath(); ctx.ellipse(34 + snap * 12, 4, 7, 4, -0.12, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
     }
     if (player.attack > 0 && player.attackPose === 'punch' && player.attackCombo < 3) {
       const progress = clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1);
@@ -3494,7 +3533,7 @@
       dash: { remaining: player.dashCooldown, duration: 1, unlocked: gameState.dash },
       whip: { remaining: player.whipCooldown, duration: 1.05, unlocked: gameState.whip },
       heavy: { remaining: player.heavyCooldown, duration: 1.35, unlocked: gameState.heavy },
-      bomb: { remaining: player.throwCooldown, duration: 0.48, unlocked: player.throwables > 0 }
+      bomb: { remaining: player.throwCooldown, duration: 0.72, unlocked: true }
     };
     document.querySelectorAll('#mobileControls [data-press]').forEach(button => {
       const action = cooldowns[button.dataset.press];
@@ -3522,7 +3561,7 @@
       gameState.dash && { key: 'K/Л', name: 'РЫВОК', cooldown: player.dashCooldown, duration: 1 },
       gameState.whip && { key: 'L/Д', name: 'ХЛЫСТ', cooldown: player.whipCooldown, duration: 1.05 },
       gameState.heavy && { key: 'I/Ш', name: 'ТЯЖЁЛЫЙ', cooldown: player.heavyCooldown, duration: 1.35 },
-      { key: 'V/М', name: `БОМБА ×${player.throwables}`, cooldown: player.throwCooldown, duration: 0.48 }
+      { key: 'V/М', name: 'УДАР НОГОЙ', cooldown: player.throwCooldown, duration: 0.72 }
     ].filter(Boolean);
     const width = 96;
     const gap = 5;
