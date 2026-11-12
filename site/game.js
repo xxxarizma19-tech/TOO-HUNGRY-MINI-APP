@@ -330,7 +330,7 @@
     const stageWidth = stage.finale ? 4200 : 1900 + stage.waves * 1370;
     const playerX = clamp(checkpoint.playerX, 42, stageWidth - 42);
     if (checkpoint.finale === true && stage.finale) {
-      return integer(checkpoint.obstacles, 0, 4) ? { stageIndex, finale: true, playerX, hp: checkpoint.hp, obstacles: checkpoint.obstacles, kills: checkpoint.kills, ...(numeric(checkpoint.bossHp, 1, 1600) ? { bossHp: checkpoint.bossHp } : {}) } : null;
+      return integer(checkpoint.obstacles, 0, 4) ? { stageIndex, finale: true, playerX, hp: clamp(checkpoint.hp, Math.ceil(maxPlayerHp / 2), maxPlayerHp), obstacles: checkpoint.obstacles, kills: checkpoint.kills, ...(numeric(checkpoint.bossHp, 1, 1600) ? { bossHp: checkpoint.bossHp } : {}) } : null;
     }
     if (checkpoint.finale === true || stage.finale || !integer(checkpoint.waveIndex, 0, stage.waves)) return null;
     if (checkpoint.boss === true ? checkpoint.waveIndex !== stage.waves : checkpoint.waveIndex >= stage.waves) return null;
@@ -341,6 +341,10 @@
   }
 
   function saveProgress() {
+    if (gameState.checkpoint) {
+      const maxHp = gameState.secretSeen ? 119 : 100;
+      gameState.checkpoint.hp = clamp(gameState.checkpoint.hp ?? maxHp, Math.ceil(maxHp / 2), maxHp);
+    }
     try {
       try {
         const previous = localStorage.getItem('tooHungrySave');
@@ -398,7 +402,8 @@
     cameraX = 0;
     if (checkpoint) {
       player.x = clamp(checkpoint.playerX ?? 145, 42, worldWidth - 42);
-      player.hp = clamp(checkpoint.hp ?? player.maxHp, 1, player.maxHp);
+      player.hp = clamp(checkpoint.hp ?? player.maxHp, Math.ceil(player.maxHp / 2), player.maxHp);
+      player.invuln = 1;
     }
     player.hpTrail = player.hp;
     enemies = [];
@@ -2095,7 +2100,7 @@
     Object.keys(touch).forEach(direction => { touch[direction] = false; });
     saveReturnCheckpoint();
     music.pause();
-    showOverlay('ПАУЗА', 'Контрольная точка сохранена. Продолжи бой или вернись к карте этапов.', 'ПРОДОЛЖИТЬ', () => startLevel(levelIndex, true));
+    showOverlay('ПАУЗА', 'Контрольная точка сохранена. При продолжении — минимум половина здоровья.', 'ПРОДОЛЖИТЬ', () => startLevel(levelIndex, true));
     if (returnToTitleButton) {
       returnToTitleButton.hidden = false;
       returnToTitleButton.onclick = showTitle;
@@ -2830,20 +2835,20 @@
     const alternateRunFrame = Math.floor(player.walk / Math.PI) % 2 === 1 && art.heroRunAlt.complete && art.heroRunAlt.naturalWidth;
     const runSprite = alternateRunFrame ? art.heroRunAlt : art.heroRun;
     const kicking = player.attack > 0 && player.attackPose === 'kick';
-    const sprite = dodging && art.heroDodge.complete && art.heroDodge.naturalWidth ? art.heroDodge : player.attack > 0 && player.attackPose === 'heavy' && art.heroHeavy.complete && art.heroHeavy.naturalWidth ? art.heroHeavy : player.attack > 0 && player.attackPose === 'whip' && art.heroWhip.complete && art.heroWhip.naturalWidth ? art.heroWhip : kicking ? art.hero : player.attack > 0 ? art.heroPunch : player.z < 0 && art.heroJump.complete && art.heroJump.naturalWidth ? art.heroJump : isMoving ? runSprite : art.hero;
+    const sprite = dodging && art.heroDodge.complete && art.heroDodge.naturalWidth ? art.heroDodge : player.attack > 0 && player.attackPose === 'heavy' && art.heroHeavy.complete && art.heroHeavy.naturalWidth ? art.heroHeavy : player.attack > 0 && player.attackPose === 'whip' ? art.hero : kicking ? art.hero : player.attack > 0 ? art.heroPunch : player.z < 0 && art.heroJump.complete && art.heroJump.naturalWidth ? art.heroJump : isMoving ? runSprite : art.hero;
     if (sprite.complete && sprite.naturalWidth) {
       const bounce = prefersReducedMotion ? 0 : isMoving ? -Math.abs(Math.sin(player.walk)) * 5 : Math.sin(time * 3.4) * 2;
       const scale = player.z < 0 ? 1.04 : 1;
-      const whipping = sprite === art.heroWhip;
-      const width = (whipping ? 228 : 144) * scale;
-      const height = (whipping ? 158 : 144) * scale;
+      const whipping = player.attack > 0 && player.attackPose === 'whip';
+      const width = 144 * scale;
+      const height = 144 * scale;
       const attackProgress = player.attack > 0 ? clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1) : 0;
       const punchPulse = player.attack > 0 ? (attackProgress < .23 ? Math.sin(attackProgress / .23 * Math.PI / 2) : Math.pow(1 - (attackProgress - .23) / .77, 2)) : 0;
       const lunge = punchPulse * (player.attackCombo === 3 ? 15 : 9);
       const hurtPulse = clamp(player.hurt / 0.36, 0, 1);
       ctx.save();
       ctx.translate(x + player.face * lunge, y + bounce + punchPulse * 2);
-      ctx.scale(whipping ? -player.face : player.face, 1);
+      ctx.scale(player.face, 1);
       if (hurtPulse > 0) ctx.filter = 'brightness(1.55) saturate(.62)';
       const idleBreath = !isMoving && player.attack <= 0 && !dodging && player.z === 0 && !prefersReducedMotion ? Math.sin(time * 2.4) * 0.016 : 0;
       const stepSway = isMoving && !prefersReducedMotion ? Math.sin(player.walk) * 0.035 : 0;
@@ -2858,6 +2863,11 @@
         ctx.rect(width * .065, -height * .225, width * .22, height * .23);
         ctx.clip('evenodd');
       }
+      if (whipping) {
+        ctx.beginPath(); ctx.rect(-width / 2 - 1, -height - 1, width + 2, height + 2);
+        ctx.rect(width * .245, -height * .49, width * .24, height * .29);
+        ctx.clip('evenodd');
+      }
       const spriteChanged = player.renderSprite && player.renderSprite !== sprite;
       if (spriteChanged) { player.previousSprite = player.renderSprite; player.spriteChangedAt = performance.now(); }
       player.renderSprite = sprite;
@@ -2870,6 +2880,15 @@
       ctx.globalAlpha = alpha * blend;
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
+      if (whipping && art.heroPunch.complete && art.heroPunch.naturalWidth) {
+        const reach = Math.sin(Math.PI * Math.pow(attackProgress, .65));
+        ctx.save(); ctx.translate(width * .21, -height * .43);
+        const extension = .65 + reach * 2.5;
+        ctx.drawImage(art.heroPunch, art.heroPunch.naturalWidth * .60, art.heroPunch.naturalHeight * .46, art.heroPunch.naturalWidth * .23, art.heroPunch.naturalHeight * .24, -7, -17, 38 * extension, 35);
+        // Stretch the sauce forearm only; the fist keeps its natural proportions.
+        ctx.drawImage(art.heroPunch, art.heroPunch.naturalWidth * .82, art.heroPunch.naturalHeight * .46, art.heroPunch.naturalWidth * .18, art.heroPunch.naturalHeight * .24, -7 + 38 * extension, -17, 29, 35);
+        ctx.restore();
+      }
       if (kicking) {
         const snap = Math.sin(Math.PI * Math.pow(attackProgress, .65));
         ctx.save(); ctx.translate(width * .146, -height * .202);
