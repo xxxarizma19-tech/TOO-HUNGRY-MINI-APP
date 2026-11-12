@@ -53,9 +53,9 @@
   const compactHudResizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(updateCompactHudScale) : null;
   compactHudResizeObserver?.observe(canvas);
   const telegramApp = window.Telegram?.WebApp;
-  const desktopControlHint = '4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · V (М) — удар ногой · M (Ь) — музыка · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст · RB удар ногой · Start пауза';
-  const touchControlHint = 'Слева — движение и пауза · справа — прыжок, атаки и удар ногой<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Подбирай соус и хилки, чтобы восстановить здоровье';
-  const leftHandedTouchControlHint = 'Справа — движение и пауза · слева — прыжок, атаки и удар ногой<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Подбирай соус и хилки, чтобы восстановить здоровье';
+  const desktopControlHint = 'WASD / стрелки — движение · Space — прыжок · J / Z — удар рукой<br>После FRY KING: V — нога · после NUGGET BRUTE: L — хлыст<br>Перед финалом L — огненный кулак · P / Esc — пауза<br>Геймпад: стик · A прыжок · B рука · RB нога · LB особый удар';
+  const touchControlHint = 'Слева — движение · справа — прыжок и доступные удары<br>Нога откроется после первого босса, хлыст — после третьего';
+  const leftHandedTouchControlHint = 'Справа — движение · слева — прыжок и доступные удары<br>Нога откроется после первого босса, хлыст — после третьего';
   let leftHandedControls = false;
   try { leftHandedControls = localStorage.getItem('tooHungryLeftHanded') === 'true'; } catch { /* The layout preference can stay session-only if storage is blocked. */ }
   function syncHandednessToggle() {
@@ -156,14 +156,16 @@
   syncFullscreenButton();
 
   const levels = [
-    { name: 'КУХНЯ ФРИТЮРНИЦЫ', chapter: 'THE FIRST SIZZLE', chapterLine: 'Жар обжигает, но первый осколок уже зовёт вперёд.', accent: '#ff765e', boss: 'FRY KING', key: 'fryKing', background: 'assets/backgrounds/fry-kitchen-background.jpg', track: 1, trackTitle: 'BREAKFAST', waves: 2, ability: 'FIRE DASH', shard: 'ОСКОЛОК I', bossLine: 'ЗДЕСЬ ВСЁ ГОРЯЧЕЕ. ОСОБЕННО Я.', victoryLine: 'Фритюрница остыла. Даже картошка выдохнула.' },
-    { name: 'ПИЦЦЕРИЯ', chapter: 'A SLICE OF TROUBLE', chapterLine: 'За хрустящей корочкой спрятан второй осколок.', accent: '#ffc177', boss: 'PIZZA SLICE', key: 'pizzaSlice', background: 'assets/backgrounds/pizzeria-background.jpg', track: 2, trackTitle: 'BANK', waves: 2, ability: 'СОУСНЫЙ ХЛЫСТ', shard: 'ОСКОЛОК II', bossLine: 'ТВОЙ ПУТЬ ОТРЕЗАН. МОЙ КУСОК.', victoryLine: 'Последний кусок взят. Пиццерия закрывается.' },
-    { name: 'ХОЛОДНЫЙ СКЛАД', chapter: 'COLD STORAGE', chapterLine: 'На морозе искра слабеет. Капля всё равно не сдаётся.', accent: '#9bdfe9', boss: 'NUGGET BRUTE', key: 'nuggetBrute', background: 'assets/backgrounds/cold-storage-background.jpg', track: 3, trackTitle: 'BASE', waves: 2, ability: 'МОЩНЫЙ УДАР', shard: 'ОСКОЛОК III', bossLine: 'ЗАМОРОЖУ ТЕБЯ ДО САМОГО ФИНАЛА.', victoryLine: 'Наггет крошится. На этот раз — буквально.' },
-    { name: 'ПАРОВАЯ КУХНЯ', chapter: 'STEAM & STRINGS', chapterLine: 'Последний осколок спрятан за клубком живой пасты.', accent: '#ee8fca', boss: 'SPAGHETTI MONSTER', key: 'spaghettiMonster', background: 'assets/backgrounds/pasta-kitchen-background.jpg', track: 4, trackTitle: 'NO HOOK ft. GURME', waves: 2, shard: 'ОСКОЛОК IV', bossLine: 'ПОПРОБУЙ НЕ ЗАПУТАТЬСЯ В МОЁМ БИТЕ.', victoryLine: 'Спагетти распутаны. Поварской кошмар закончен.' },
+    { name: 'КУХНЯ ФРИТЮРНИЦЫ', chapter: 'THE FIRST SIZZLE', chapterLine: 'Жар обжигает, но первый осколок уже зовёт вперёд.', accent: '#ff765e', boss: 'FRY KING', key: 'fryKing', background: 'assets/backgrounds/fry-kitchen-background.jpg', track: 1, trackTitle: 'BREAKFAST', waves: 2, ability: 'УДАР НОГОЙ', shard: 'ОСКОЛОК I', bossLine: 'ЗДЕСЬ ВСЁ ГОРЯЧЕЕ. ОСОБЕННО Я.', victoryLine: 'Фритюрница остыла. Даже картошка выдохнула.' },
+    { name: 'ПИЦЦЕРИЯ', chapter: 'A SLICE OF TROUBLE', chapterLine: 'За хрустящей корочкой спрятан второй осколок.', accent: '#ffc177', boss: 'PIZZA SLICE', key: 'pizzaSlice', background: 'assets/backgrounds/pizzeria-background.jpg', track: 2, trackTitle: 'BANK', waves: 2, ability: 'УСИЛЕННАЯ НОГА', shard: 'ОСКОЛОК II', bossLine: 'ТВОЙ ПУТЬ ОТРЕЗАН. МОЙ КУСОК.', victoryLine: 'Последний кусок взят. Пиццерия закрывается.' },
+    { name: 'ХОЛОДНЫЙ СКЛАД', chapter: 'COLD STORAGE', chapterLine: 'На морозе искра слабеет. Капля всё равно не сдаётся.', accent: '#9bdfe9', boss: 'NUGGET BRUTE', key: 'nuggetBrute', background: 'assets/backgrounds/cold-storage-background.jpg', track: 3, trackTitle: 'BASE', waves: 2, ability: 'СОУСНЫЙ ХЛЫСТ', shard: 'ОСКОЛОК III', bossLine: 'ЗАМОРОЖУ ТЕБЯ ДО САМОГО ФИНАЛА.', victoryLine: 'Наггет крошится. На этот раз — буквально.' },
+    { name: 'ПАРОВАЯ КУХНЯ', chapter: 'STEAM & STRINGS', chapterLine: 'Последний осколок спрятан за клубком живой пасты.', accent: '#ee8fca', boss: 'SPAGHETTI MONSTER', key: 'spaghettiMonster', background: 'assets/backgrounds/pasta-kitchen-background.jpg', track: 4, trackTitle: 'NO HOOK ft. GURME', waves: 2, ability: 'ОГНЕННЫЙ КУЛАК', shard: 'ОСКОЛОК IV', bossLine: 'ПОПРОБУЙ НЕ ЗАПУТАТЬСЯ В МОЁМ БИТЕ.', victoryLine: 'Спагетти распутаны. Поварской кошмар закончен.' },
     { name: 'TOO HUNGRY', chapter: 'BACK TO THE TABLE', chapterLine: 'Четыре осколка собрались. Шеф и блюдо уже рядом.', accent: '#ffdc8a', boss: 'BURGER TOO HUNGRY', key: 'burger', background: 'assets/backgrounds/final-counter-background.jpg', track: 5, trackTitle: 'HOFMANNITA', finale: true }
   ];
 
   const art = {
+    burger: deferArt('assets/characters-web/burger-too-hungry.png'),
+    hotplate: deferArt('assets/obstacles/flaming-hotplate.png'),
     platedSteak: loadArt('assets/food/plated-ribeye.png'),
     hero: loadArt('assets/characters-web/sauce-drop.png'),
     heroRun: loadArt('assets/characters-web/sauce-drop-run.png'),
@@ -263,7 +265,7 @@
     if (gameState.dash) requestArt(art.heroDodge);
     if (gameState.whip) requestArt(art.heroWhip);
     if (gameState.heavy) requestArt(art.heroHeavy);
-    if (stage.finale) requestArt(art.chefWin);
+    if (stage.finale) [art.chefWin, art.burger, art.hotplate].forEach(requestArt);
   }
 
   function loadProgress() {
@@ -284,9 +286,15 @@
         if (integer(backup?.maxLevel, 0, levels.length - 1)) {
           stored = backup;
           saveRecoveredFromBackup = true;
-        } else return fresh;
+        } else {
+          const access = Number(localStorage.getItem('tooHungryUnlockedLevel') || 0);
+          if (integer(access, 1, levels.length - 1)) stored = { ...fresh, maxLevel: access, currentLevel: access };
+          else return fresh;
+        }
       }
-      const maxLevel = integer(stored.maxLevel, 0, levels.length - 1) ? stored.maxLevel : 0;
+      const backupAccess = parseSaveObject(localStorage.getItem('tooHungrySaveBackup'));
+      const watermark = Number(localStorage.getItem('tooHungryUnlockedLevel') || 0);
+      const maxLevel = Math.max(stored.maxLevel, integer(backupAccess?.maxLevel, 0, 4) ? backupAccess.maxLevel : 0, integer(watermark, 0, 4) ? watermark : 0);
       const secretSeen = stored.secretSeen === true;
       return {
         ...fresh,
@@ -355,6 +363,9 @@
           }
         }
       } catch { /* A backup is optional; it must never block the main save. */ }
+      const unlocked = Number(localStorage.getItem('tooHungryUnlockedLevel') || 0);
+      if (Number.isInteger(unlocked) && unlocked >= 0 && unlocked < levels.length) gameState.maxLevel = Math.max(gameState.maxLevel, unlocked);
+      localStorage.setItem('tooHungryUnlockedLevel', String(gameState.maxLevel));
       localStorage.setItem('tooHungrySave', JSON.stringify(gameState));
       saveStorageUnavailable = false;
       saveWarningAnnounced = false;
@@ -382,6 +393,10 @@
     return { x: 145, y: 420, z: 0, vz: 0, jumpBuffer: 0, coyoteTime: 0, landingFx: 0, hp: maxHp, hpTrail: maxHp, maxHp, face: 1, attack: 0, attackPose: '', attackDuration: 0, attackCooldown: 0, dash: 0, dashCooldown: 0, whipCooldown: 0, heavyCooldown: 0, kickCooldown: 0, invuln: 0, dodgeReady: false, combo: 0, attackCombo: 0, comboTime: 0, finisher: 0, walk: 0, stepCooldown: 0, hurt: 0 };
   }
 
+  function chapterAbilities(index = levelIndex) {
+    return { kick: index >= 1, special: index >= 3, upgraded: index >= 4, specialName: index >= 4 ? 'ОГНЕННЫЙ КУЛАК' : 'ХЛЫСТ' };
+  }
+
   function startLevel(index, resume = false) {
     stopTitleAttract();
     stopMenuGamepadNavigation();
@@ -392,12 +407,15 @@
     requestPlayFullscreen();
     levelIndex = Math.max(0, Math.min(index, levels.length - 1));
     const stage = levels[levelIndex];
+    gameState.dash = false; gameState.heavy = false; gameState.whip = chapterAbilities().special;
+    syncControlHint();
     preloadStageArt(levelIndex);
     const checkpoint = resume && gameState.checkpoint?.stageIndex === levelIndex ? gameState.checkpoint : null;
     gameState.currentLevel = levelIndex;
     if (!checkpoint) gameState.checkpoint = null;
     saveProgress();
     player = newPlayer();
+    if (stage.finale) player.y = 452;
     worldWidth = stage.finale ? 4200 : 1900 + stage.waves * 1370;
     cameraX = 0;
     if (checkpoint) {
@@ -691,6 +709,7 @@
 
   function showOverlay(heading, body, buttonText, action) {
     stopTitleAttract();
+    document.querySelector('.panel')?.classList.remove('is-level-menu');
     running = false;
     telegramApp?.BackButton?.hide?.();
     try { telegramApp?.unlockOrientation?.(); } catch { /* Older Telegram clients can ignore orientation unlock. */ }
@@ -703,6 +722,8 @@
     if (shareRunButton) shareRunButton.hidden = true;
     if (runGradeBadge) runGradeBadge.hidden = true;
     if (campaignRoute) campaignRoute.hidden = true;
+    const routeLabel = document.querySelector('#routeLabel'); if (routeLabel) routeLabel.hidden = true;
+    const albumGreeting = document.querySelector('#albumGreeting'); if (albumGreeting) albumGreeting.hidden = true;
     if (saveTransfer) saveTransfer.hidden = true;
     if (saveTransferHint) saveTransferHint.hidden = true;
     if (returnToTitleButton) returnToTitleButton.hidden = true;
@@ -793,15 +814,17 @@
 
   function showTitle() {
     const savedCheckpoint = gameState.checkpoint;
-    const checkpointIsCurrent = savedCheckpoint && savedCheckpoint.stageIndex <= gameState.maxLevel && !(savedCheckpoint.boss && savedCheckpoint.stageIndex < gameState.maxLevel);
-    const next = checkpointIsCurrent ? savedCheckpoint.stageIndex : Math.min(gameState.maxLevel, levels.length - 1);
+    const checkpointIsCurrent = savedCheckpoint && savedCheckpoint.stageIndex <= gameState.maxLevel;
+    const next = checkpointIsCurrent ? savedCheckpoint.stageIndex : Math.min(gameState.currentLevel ?? gameState.maxLevel, gameState.maxLevel, levels.length - 1);
     const checkpoint = checkpointIsCurrent ? savedCheckpoint : null;
     const checkpointLabel = checkpoint?.boss ? 'БОСС' : checkpoint?.finale ? 'ФИНАЛ' : checkpoint ? `ВОЛНА ${checkpoint.waveIndex + 1}` : '';
     const continueText = gameState.runFinished ? 'НОВЫЙ ЗАБЕГ' : checkpoint ? `Продолжить · этап ${next + 1} · ${checkpointLabel}` : next > 0 ? `Продолжить · этап ${next + 1}` : 'Начать забег';
-    const recap = gameState.runFinished ? `Последняя капля добралась до блюда. Твой забег: ${formatTime(gameState.runSeconds)} · повержено врагов: ${gameState.runKills} · идеальные увороты: ${gameState.runDodges || 0} · серия: ${gameState.runPeakStreak || 0}. Лучшее время: ${formatTime(gameState.bestRunSeconds)}.` : 'Ой, капля соуса не попала в блюдо. Теперь ей предстоит самостоятельно проделать путь до блюда. Четыре кухни и пять боссов — включая BURGER TOO HUNGRY.';
+    const recap = gameState.maxLevel > 0 ? 'Прогресс сохранён. Продолжи с контрольной точки или выбери любой открытый уровень ниже. Новый забег не закрывает пройденные уровни.' : 'Ой, капля соуса не попала в блюдо. Теперь ей предстоит самостоятельно проделать путь до блюда.';
     renderCampaignRoute(next);
     showOverlay('TOO HUNGRY', recap, continueText, () => gameState.runFinished ? restartCampaign() : startLevel(next, Boolean(checkpoint)));
+    document.querySelector('.panel')?.classList.add('is-level-menu');
     if (campaignRoute) campaignRoute.hidden = false;
+    const routeLabel = document.querySelector('#routeLabel'); if (routeLabel) routeLabel.hidden = false;
     if (saveTransfer) saveTransfer.hidden = false;
     if (saveTransferHint) saveTransferHint.hidden = false;
     syncSaveTransferHint();
@@ -1165,7 +1188,7 @@
     if (background.complete && background.naturalWidth) ctx.drawImage(background, 0, 0, W, H);
     else { ctx.fillStyle = '#120d10'; ctx.fillRect(0, 0, W, H); }
     ctx.fillStyle = '#09070ab0'; ctx.fillRect(0, 0, W, H);
-    if (!prefersReducedMotion) { const light = ctx.createRadialGradient(478, 236, 30, 478, 236, 510); light.addColorStop(0, 'rgba(255,112,73,.12)'); light.addColorStop(1, 'rgba(8,4,8,0)'); ctx.fillStyle = light; ctx.fillRect(0,0,W,H); }
+    if (!prefersReducedMotion) { const light = ctx.createRadialGradient(245, 236, 30, 478, 236, 510); light.addColorStop(0, 'rgba(255,112,73,.12)'); light.addColorStop(1, 'rgba(8,4,8,0)'); ctx.fillStyle = light; ctx.fillRect(0,0,W,H); }
     const cameraZoom = prefersReducedMotion ? 1 : 1 + clamp(seconds / 18, 0, 1) * 0.055;
     const impactShake = !prefersReducedMotion && seconds >= 8.2 && seconds < 8.62 ? (1 - (seconds - 8.2) / 0.42) : 0;
     const shakeX = impactShake * Math.sin(seconds * 73) * 4.5;
@@ -1179,15 +1202,15 @@
       const entrance = prefersReducedMotion ? 1 : Math.min(1, seconds / 1.2);
       const reaction = !prefersReducedMotion && seconds > 8.2 && seconds < 9.2 ? Math.sin(seconds * 34) * 5 : 0;
       ctx.save(); ctx.globalAlpha = entrance; ctx.translate((1 - entrance) * 150 + reaction, 0);
-      ctx.drawImage(chef, 490, -28 + (prefersReducedMotion ? 0 : Math.sin(seconds * 2) * 2), 430, 645);
+      ctx.drawImage(chef, 110, 25 + (prefersReducedMotion ? 0 : Math.sin(seconds * 2) * 2), 283, 425);
       ctx.restore();
     }
     drawCutscenePlate();
     if (seconds > 3.45 && seconds < 8.2) {
       const progress = Math.min(1, (seconds - 3.45) / 4.75);
       const t = progress;
-      const x = prefersReducedMotion ? 300 : (1-t)*(1-t)*520 + 2*(1-t)*t*470 + t*t*300;
-      const y = prefersReducedMotion ? 433 : 106 + Math.pow(t, 2.15) * 327;
+      const x = prefersReducedMotion ? 390 : (1-t)*(1-t)*144 + 2*(1-t)*t*310 + t*t*390;
+      const y = prefersReducedMotion ? 433 : 77 + Math.pow(t, 2.15) * 356;
       if (!prefersReducedMotion) {
         ctx.save(); ctx.globalAlpha = .32 + t * .28; ctx.strokeStyle = '#f2483d'; ctx.lineWidth = 3 + t * 5; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(x + 7, y - 17 - t * 30); ctx.quadraticCurveTo(x + 3, y - 14, x, y - 5); ctx.stroke(); ctx.restore();
@@ -1197,13 +1220,13 @@
     if (seconds >= 8.2) {
       const splash = prefersReducedMotion ? 0.78 : Math.max(0, 1 - (seconds - 8.2) * 1.2);
       ctx.globalAlpha = splash;
-      ctx.fillStyle = '#ed372f'; ctx.beginPath(); ctx.ellipse(300, 445, 34 + (1-splash)*36, 8 + (1-splash)*5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ed372f'; ctx.beginPath(); ctx.ellipse(390, 445, 34 + (1-splash)*36, 8 + (1-splash)*5, 0, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
       if (!prefersReducedMotion && seconds < 8.95) {
         const age = seconds - 8.2;
         for (let i = 0; i < 9; i++) {
           const direction = (i - 4) / 4;
-          const px = 300 + direction * age * (76 + (i % 3) * 24);
+          const px = 390 + direction * age * (76 + (i % 3) * 24);
           const py = 441 - age * (80 + (i % 4) * 24) + age * age * 240;
           ctx.globalAlpha = clamp(1 - age / .75, 0, 1);
           drawSauceDrop(px, Math.min(446, py), 2.4 + (i % 3));
@@ -1212,7 +1235,7 @@
       }
       if (seconds > 9.2) {
         const run = prefersReducedMotion ? 0 : Math.min(1, (seconds - 9.2) / 4.1);
-        const heroX = prefersReducedMotion ? 430 : 294 + run * 410;
+        const heroX = prefersReducedMotion ? 480 : 390 + run * 660;
         const hero = art.heroRun.complete && art.heroRun.naturalWidth ? art.heroRun : art.hero;
         if (hero.complete && hero.naturalWidth) {
           ctx.save(); ctx.translate(heroX, 460 + (prefersReducedMotion ? 0 : Math.sin(seconds * 16) * 4));
@@ -1224,8 +1247,8 @@
     ctx.restore();
     const caption = seconds < 3.2 ? 'XARIZMA19 ГОТОВИТ СВОЙ ФИРМЕННЫЙ СОУС TOO HUNGRY' : seconds < 6.3 ? 'ОДНА КАПЛЯ — И БЛЮДО СТАНЕТ ЛЕГЕНДОЙ…' : seconds < 8.2 ? 'ОЙ. КАПЛЯ ЛЕТИТ МИМО!' : seconds < 9.2 ? 'ТИШИНА. А ПОТОМ — ПЕРВОЕ ДВИЖЕНИЕ.' : seconds < 14 ? 'КАПЛЯ ОЖИЛА. И ДОБЕРЁТСЯ ДО БЛЮДА САМА.' : 'ЧЕТЫРЕ КУХНИ · ПЯТЬ БОССОВ · ОДНА ПОСЛЕДНЯЯ КАПЛЯ';
     announce(caption);
-    rounded(52, 32, 482, 35, 4, '#100d10d9');
-    text('XARIZMA19  /  TOO HUNGRY', 69, 54, 10, '#ff806c', 'left', 900);
+    rounded(560, 32, 348, 35, 4, '#100d10d9');
+    text('XARIZMA19  /  TOO HUNGRY', 577, 54, 10, '#ff806c', 'left', 900);
     rounded(52, 462, 620, 46, 5, '#100d10e8');
     ctx.strokeStyle = '#743b38'; ctx.strokeRect(52.5, 462.5, 619, 45);
     text(caption, 72, 491, 11, '#fff0df', 'left', 900);
@@ -1236,134 +1259,46 @@
     const background = art.backgrounds[4];
     if (background?.complete && background.naturalWidth) ctx.drawImage(background, 0, 0, W, H);
     else { ctx.fillStyle = '#171115'; ctx.fillRect(0, 0, W, H); }
-    ctx.fillStyle = '#08070bd0'; ctx.fillRect(0, 0, W, H);
-    const chef = art.chefWin;
-    if (chef?.complete && chef.naturalWidth) {
-      const scale = prefersReducedMotion ? 1 : Math.min(1, seconds / 1.4);
-      ctx.globalAlpha = scale;
-      ctx.save();
-      ctx.translate(795, 245 + (prefersReducedMotion ? 0 : Math.sin(seconds * 2.4) * 2.2));
-      if (!prefersReducedMotion) ctx.rotate(Math.sin(seconds * 1.7) * 0.008);
-      ctx.drawImage(chef, -145, -217.5, 290, 435);
-      ctx.restore();
-      ctx.globalAlpha = 1;
+    ctx.fillStyle = '#08070bc7'; ctx.fillRect(0, 0, W, H);
+    const light = ctx.createRadialGradient(255, 350, 15, 255, 350, 280);
+    light.addColorStop(0, 'rgba(255,178,86,.12)'); light.addColorStop(1, 'rgba(255,178,86,0)');ctx.fillStyle=light;ctx.fillRect(0,0,W,H);
+    if (art.chefWin.complete && art.chefWin.naturalWidth) {
+      ctx.save();ctx.translate(380, 229 + (prefersReducedMotion ? 0 : Math.sin(seconds * 2) * 1.2));
+      ctx.rotate(prefersReducedMotion ? 0 : Math.sin(seconds * 1.4) * .006);
+      ctx.drawImage(art.chefWin, -125, -192, 250, 400);ctx.restore();
     }
     drawCutscenePlate();
-    const landingAt = 4.82;
-    const flight = prefersReducedMotion ? 1 : clamp((seconds - 1.65) / (landingAt - 1.65), 0, 1);
-    const easedFlight = Math.pow(flight, 1.8);
-    const bounceTime = prefersReducedMotion ? 0 : Math.max(0, seconds - landingAt);
-    const dropY = prefersReducedMotion ? 354 : -20 + easedFlight * 374 - Math.abs(Math.sin(bounceTime * 11)) * 23 * Math.exp(-bounceTime * 7);
-    if (seconds > 1.2 && seconds < landingAt) drawSauceDrop(482, dropY, 15);
-    if (seconds >= landingAt) {
-      const spread = prefersReducedMotion ? 1 : 1 - Math.exp(-bounceTime * 9);
-      ctx.save(); ctx.translate(482, 354); ctx.scale(.5 + spread * .5, .45 + spread * .55);
-      const sauce = ctx.createLinearGradient(0, -8, 0, 13); sauce.addColorStop(0, '#ff6350'); sauce.addColorStop(.4, '#c92d22'); sauce.addColorStop(1, '#7e1819');
-      ctx.fillStyle = sauce; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.bezierCurveTo(-20,-10,-4,-5,3,-9); ctx.bezierCurveTo(16,-13,38,-4,30,4); ctx.bezierCurveTo(22,11,5,4,-5,9); ctx.bezierCurveTo(-16,13,-35,6,-26,0); ctx.fill();
-      ctx.strokeStyle='#ffb18a'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(-17,-3); ctx.quadraticCurveTo(-7,-6,1,-4); ctx.stroke(); ctx.restore();
-    }
-    if (seconds >= landingAt) {
-      const impact = prefersReducedMotion ? 0.42 : Math.max(0, 1 - bounceTime * 2.4);
+    const launchAt = 1.65, landingAt = 4.82;
+    if (seconds < launchAt) {
+      const walk = prefersReducedMotion ? 1 : clamp(seconds / launchAt, 0, 1);
+      const heroX = -45 + walk * 125;
+      const hero = art.heroRun.complete && art.heroRun.naturalWidth ? art.heroRun : art.hero;
+      ctx.save();ctx.translate(heroX, 452 - (prefersReducedMotion ? 0 : Math.abs(Math.sin(seconds * 13)) * 3));ctx.drawImage(hero,-42,-84,84,84);ctx.restore();
+    } else if (seconds < landingAt) {
+      const t = prefersReducedMotion ? 1 : clamp((seconds - launchAt) / (landingAt - launchAt), 0, 1);
+      const x = 80 + t * 150, y = 430 + (375 - 430) * t - Math.sin(t * Math.PI) * 172;
+      drawSauceDrop(x, y, 14 - t * 3);
       if (!prefersReducedMotion) {
-        ctx.save();
-        ctx.globalAlpha = 0.16 * impact;
-        ctx.fillStyle = '#fff3d8';
-        ctx.fillRect(0, 0, W, H);
-        ctx.restore();
-        for (let i = 0; i < 10; i++) {
-          const angle = i * Math.PI * 2 / 10 + seconds * 0.35;
-          const length = 14 + (0.5 + 0.5 * Math.sin(seconds * 6 + i)) * 17;
-          ctx.globalAlpha = 0.55 + Math.sin(seconds * 7 + i) * 0.25;
-          ctx.strokeStyle = i % 2 ? '#ff8060' : '#ffe0a0';
-          ctx.lineWidth = i % 3 === 0 ? 2.5 : 1.5;
-          ctx.beginPath();
-          ctx.moveTo(482 + Math.cos(angle) * 28, 354 + Math.sin(angle) * 14);
-          ctx.lineTo(482 + Math.cos(angle) * (28 + length), 354 + Math.sin(angle) * (14 + length * 0.55));
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
+        ctx.save();ctx.strokeStyle='#ee503e';ctx.lineWidth=3;ctx.globalAlpha=.35;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x-8,y-13);ctx.quadraticCurveTo(x-4,y-8,x-2,y-5);ctx.stroke();ctx.restore();
       }
-      ctx.strokeStyle = `rgba(255,214,140,${impact * 0.8})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(482, 360, prefersReducedMotion ? 58 : 32 + (1 - impact) * 63, prefersReducedMotion ? 11 : 7 + (1 - impact) * 12, 0, 0, Math.PI * 2);
-      ctx.stroke();
     }
-    if (seconds >= 5) {
-      const glow = prefersReducedMotion ? 0.42 : Math.min(1, (seconds - 5) * 0.5);
-      ctx.globalAlpha = prefersReducedMotion ? glow : glow * (0.62 + Math.sin(seconds * 8) * 0.18);
-      ctx.fillStyle = '#ffcf78'; ctx.beginPath(); ctx.ellipse(482, 350, 100, 42, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-      text('БЛЮДО ГОТОВО', 480, 120, 24, '#ffdfa7', 'center', 950);
-    }
-    if (seconds >= 5.4) {
-      const celebration = prefersReducedMotion ? 0.55 : clamp((seconds - 5.4) / 0.8, 0, 1);
-      ctx.save();
-      ctx.globalAlpha = celebration;
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2 + (prefersReducedMotion ? 0 : seconds * 0.72);
-        const orbit = prefersReducedMotion ? 1 : 1 + Math.sin(seconds * 2.4 + i) * 0.045;
-        const x = 468 + Math.cos(angle) * 154 * orbit;
-        const y = 405 + Math.sin(angle) * 48 * orbit;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(angle + Math.PI / 2);
-        ctx.fillStyle = i % 3 === 0 ? '#e85243' : i % 3 === 1 ? '#e8c17b' : '#91aa64';
-        ctx.beginPath();
-        ctx.ellipse(0, 0, i % 3 === 2 ? 4 : 3, i % 3 === 2 ? 8 : 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+    if (seconds >= landingAt) {
+      const age = seconds - landingAt, spread = prefersReducedMotion ? 1 : 1 - Math.exp(-age * 9);
+      ctx.save();ctx.translate(230,375);ctx.scale(.45+spread*.55,.45+spread*.55);
+      const sauce=ctx.createLinearGradient(0,-5,0,10);sauce.addColorStop(0,'#ff6950');sauce.addColorStop(.5,'#c33225');sauce.addColorStop(1,'#791b1b');ctx.fillStyle=sauce;
+      ctx.beginPath();ctx.moveTo(-17,0);ctx.bezierCurveTo(-18,-8,-4,-5,3,-6);ctx.bezierCurveTo(17,-8,24,0,17,5);ctx.bezierCurveTo(10,9,-3,3,-9,7);ctx.bezierCurveTo(-23,8,-23,3,-17,0);ctx.fill();
+      ctx.strokeStyle='#ffbe91';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(-10,-2);ctx.quadraticCurveTo(-4,-4,1,-2);ctx.stroke();ctx.restore();
+      if (!prefersReducedMotion && age < .7) {
+        for(let i=0;i<9;i++){const angle=i*Math.PI*2/9, distance=10+age*48;ctx.globalAlpha=(1-age/.7)*.8;ctx.fillStyle=i%2?'#ffd68a':'#ff6a47';ctx.save();ctx.translate(230+Math.cos(angle)*distance,375+Math.sin(angle)*distance*.55-age*12);ctx.rotate(angle);ctx.fillRect(-1,-3,2,6);ctx.restore()}ctx.globalAlpha=1;
       }
-      if (!prefersReducedMotion) {
-        for (let i = 0; i < 5; i++) {
-          const sparkle = (seconds * 0.48 + i / 5) % 1;
-          const x = 468 + Math.cos(i * 2.4 + seconds * 0.55) * (82 + sparkle * 65);
-          const y = 395 + Math.sin(i * 2.4 + seconds * 0.55) * (23 + sparkle * 25) - sparkle * 32;
-          const radius = 1.5 + (1 - sparkle) * 2.2;
-          ctx.globalAlpha = celebration * sparkle;
-          ctx.fillStyle = i % 2 ? '#fff0ca' : '#ff8c69';
-          ctx.beginPath();
-          ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.restore();
+      text('БЛЮДО ГОТОВО', 710, 232, 24, '#ffdfa7', 'center', 950);
+      text('Приятного прослушивания!', 710, 264, 14, '#f2c794', 'center', 800);
+      text('TOO HUNGRY · XARIZMA19', 710, 291, 9, '#bda393', 'center', 800);
     }
-    if (seconds >= 7.2) {
-      const reveal = clamp((seconds - 7.2) / 0.7, 0, 1);
-      ctx.save();
-      ctx.globalAlpha = reveal;
-      ctx.translate(156, 274);
-      const spinTime = seconds - 7.2;
-      if (!prefersReducedMotion) ctx.rotate(spinTime * 1.05 + 0.58 * (1 - Math.exp(-spinTime * 1.4)));
-      const vinyl = ctx.createRadialGradient(-14, -16, 2, 0, 0, 57);
-      vinyl.addColorStop(0, '#51474a');
-      vinyl.addColorStop(0.42, '#201d20');
-      vinyl.addColorStop(0.72, '#393236');
-      vinyl.addColorStop(1, '#171517');
-      ctx.fillStyle = vinyl;
-      ctx.shadowColor = '#ffbd7560'; ctx.shadowBlur = prefersReducedMotion ? 7 : 15;
-      ctx.beginPath(); ctx.arc(0, 0, 56, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#ffffff24'; ctx.lineWidth = 1;
-      for (const radius of [24, 30, 37, 44, 51]) {
-        ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke();
-      }
-      ctx.fillStyle = '#d85b48'; ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
-      text('TOO', 0, -2, 7, '#fff0dc', 'center', 950);
-      text('HUNGRY', 0, 6, 5, '#fff0dc', 'center', 950);
-      ctx.fillStyle = '#f6dfc2'; ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-      ctx.globalAlpha = reveal;
-      text('THE ALBUM', 156, 347, 9, '#f1c998', 'center', 900);
-      ctx.globalAlpha = 1;
-    }
-    rounded(52, 32, 482, 35, 4, '#100d10d9');
-    text('XARIZMA19  /  TOO HUNGRY', 69, 54, 10, '#ff806c', 'left', 900);
-    rounded(52, 462, 650, 46, 5, '#100d10e8');
-    const caption = seconds < 2 ? 'ПОСЛЕДНЯЯ КАПЛЯ ВОЗВРАЩАЕТСЯ К ШЕФУ' : seconds < 5 ? 'ТЕПЕРЬ ОНА ПОПАЛА ТОЧНО В ЦЕЛЬ' : seconds < 8.2 ? 'ПЯТЬ ТРЕКОВ · ЧЕТЫРЕ КУХНИ · ОДНА ИСТОРИЯ' : 'TOO HUNGRY · БЛЮДО ГОТОВО · ШЕФ ДОВОЛЕН';
-    announce(caption);
-    text(caption, 72, 491, 11, '#fff0df', 'left', 900);
-    text('A / B / START / ENTER / TAP — ПРОДОЛЖИТЬ', 928, 520, 8, '#f0d7c1', 'right', 700);
+    rounded(560,32,348,35,4,'#100d10d9');text('XARIZMA19  /  TOO HUNGRY',577,54,10,'#ff806c','left',900);
+    const caption=seconds<launchAt?'ПОСЛЕДНЯЯ КАПЛЯ ВОЗВРАЩАЕТСЯ К БЛЮДУ':seconds<landingAt?'ЕЩЁ ОДИН ПРЫЖОК — ТОЧНО НА СТЕЙК':'ПУТЬ ПРОЙДЕН · ТЕПЕРЬ ВРЕМЯ АЛЬБОМА';
+    announce(caption);rounded(52,470,650,38,5,'#100d10e8');text(caption,72,494,10,'#fff0df','left',900);
+    text('ENTER / TAP — К АЛЬБОМУ',928,520,8,'#f0d7c1','right',700);
   }
 
   function drawBossVictorySequence(seconds) {
@@ -1457,7 +1392,7 @@
     const recordText = fullCampaign
       ? (gameState.lastRunIsRecord ? 'НОВЫЙ РЕКОРД!' : `ЛУЧШЕЕ ВРЕМЯ ${formatTime(gameState.bestRunSeconds)}`)
       : 'ПОВТОРНЫЙ ЗАБЕГ';
-    const summary = `ПОПАЛИ В БЛЮДО. ЗАБЕГ ${formatTime(gameState.runSeconds)} · ВРАГИ ${gameState.runKills} · УВОРОТЫ ${gameState.runDodges || 0} · ЛУЧШАЯ СЕРИЯ ${gameState.runPeakStreak || 0} · ${recordText}. Спасибо, что прошёл этот путь под альбом TOO HUNGRY.`;
+    const summary = `ПОПАЛИ В БЛЮДО. ЗАБЕГ ${formatTime(gameState.runSeconds)} · ВРАГИ ${gameState.runKills} · ЛУЧШАЯ СЕРИЯ ${gameState.runPeakStreak || 0} · ${recordText}. Спасибо, что прошёл этот путь под альбом TOO HUNGRY.`;
     showOverlay('TOO HUNGRY', summary, 'НОВЫЙ ЗАБЕГ', restartCampaign);
     if (fullCampaign && runGradeBadge) {
       const grade = getChefGrade();
@@ -1468,6 +1403,8 @@
       runGradeBadge.hidden = false;
     }
     if (albumButton) albumButton.hidden = false;
+    const greeting = document.querySelector('#albumGreeting'); if (greeting) greeting.hidden = false;
+    if (returnToTitleButton) { returnToTitleButton.hidden = false; returnToTitleButton.textContent = 'ВЫБРАТЬ УРОВЕНЬ'; returnToTitleButton.onclick = showTitle; }
     if (shareRunButton) shareRunButton.hidden = false;
   }
 
@@ -1475,7 +1412,7 @@
     const campaign = (gameState.runStartLevel ?? 0) === 0 ? 'ПОЛНАЯ КАМПАНИЯ' : 'ПОВТОРНЫЙ ЗАБЕГ';
     const rank = (gameState.runStartLevel ?? 0) === 0 ? ` · ранг: ${getChefGrade().rank}` : '';
     const shareUrl = location.protocol === 'https:' ? `${location.origin}${location.pathname}` : '';
-    const summary = `TOO HUNGRY · ${campaign}${rank}\nЗабег: ${formatTime(gameState.runSeconds)} · враги: ${gameState.runKills} · идеальные увороты: ${gameState.runDodges || 0} · серия: ${gameState.runPeakStreak || 0}.`;
+    const summary = `TOO HUNGRY · ${campaign}${rank}\nЗабег: ${formatTime(gameState.runSeconds)} · враги: ${gameState.runKills} · серия: ${gameState.runPeakStreak || 0}.`;
     const message = `${summary}${shareUrl ? `\n\nСыграй тоже: ${shareUrl}` : ''}`;
     try {
       if (navigator.share) {
@@ -1498,7 +1435,7 @@
   shareRunButton?.addEventListener('click', shareRun);
 
   function restartCampaign() {
-    gameState.maxLevel = 0;
+    // A new run resets the run, never the library of unlocked chapters.
     gameState.shards = 0;
     gameState.dash = false;
     gameState.whip = false;
@@ -1527,29 +1464,25 @@
   function getChefGrade() {
     const streak = gameState.runPeakStreak || 0;
     const dodges = gameState.runDodges || 0;
-    if (streak >= 19 && dodges >= 8) return { rank: 'S', title: 'XARIZMA19 · ЛЕГЕНДА' };
-    if (streak >= 10 && dodges >= 4) return { rank: 'A', title: 'ШЕФСКИЙ УРОВЕНЬ' };
-    if (streak >= 5 || dodges >= 2) return { rank: 'B', title: 'СМЕНА ЗАКРЫТА' };
+    if (streak >= 8) return { rank: 'S', title: 'XARIZMA19 · ЛЕГЕНДА' };
+    if (streak >= 6) return { rank: 'A', title: 'ШЕФСКИЙ УРОВЕНЬ' };
+    if (streak >= 3 || dodges >= 2) return { rank: 'B', title: 'СМЕНА ЗАКРЫТА' };
     return { rank: 'C', title: 'БЛЮДО СПАСЕНО' };
   }
 
   function drawCutscenePlate() {
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,.5)';
-    ctx.beginPath(); ctx.ellipse(468, 455, 166, 16, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.ellipse(230, 445, 101, 10, 0, 0, Math.PI * 2); ctx.fill();
     if (art.platedSteak.complete && art.platedSteak.naturalWidth) {
-      const width = 356, height = width * art.platedSteak.naturalHeight / art.platedSteak.naturalWidth;
-      ctx.drawImage(art.platedSteak, 290, 463 - height, width, height);
+      const width = 220, height = width * art.platedSteak.naturalHeight / art.platedSteak.naturalWidth;
+      ctx.drawImage(art.platedSteak, 120, 446 - height, width, height);
     }
     if (!prefersReducedMotion) {
       const sceneTime = cutscene?.time ?? time;
-      for (let i = 0; i < 4; i++) {
-        const phase = (sceneTime * .43 + i * .27) % 1;
-        const x = 436 + i * 20 + Math.sin(phase * 4 + i) * 5;
-        ctx.globalAlpha = Math.sin(phase * Math.PI) * .2;
-        ctx.strokeStyle = '#fff0dc'; ctx.lineWidth = 1.5 + phase * 2;
-        ctx.beginPath(); ctx.moveTo(x, 345 - phase * 35);
-        ctx.bezierCurveTo(x - 9, 334 - phase * 35, x + 12, 323 - phase * 35, x + 3, 310 - phase * 35); ctx.stroke();
+      for (let i = 0; i < 3; i++) {
+        const phase = (sceneTime * .43 + i * .32) % 1, x = 207 + i * 15 + Math.sin(phase * 4 + i) * 3;
+        ctx.globalAlpha = Math.sin(phase * Math.PI) * .18; ctx.strokeStyle = '#fff0dc'; ctx.lineWidth = 1.2 + phase;
+        ctx.beginPath(); ctx.moveTo(x, 373 - phase * 24); ctx.bezierCurveTo(x - 5, 365 - phase * 24, x + 7, 357 - phase * 24, x + 2, 349 - phase * 24); ctx.stroke();
       }
     }
     ctx.restore();
@@ -1567,10 +1500,27 @@
 
   const physicalKeys = { KeyA:'a', KeyW:'w', KeyD:'d', KeyS:'s', KeyJ:'j', KeyZ:'z', KeyK:'k', KeyX:'x', KeyL:'l', KeyI:'i', KeyM:'m', KeyV:'v', KeyP:'p', Space:' ', Enter:'enter', Escape:'escape', ArrowUp:'arrowup', ArrowDown:'arrowdown', ArrowLeft:'arrowleft', ArrowRight:'arrowright' };
   const keyFromEvent = event => physicalKeys[event.code] || event.key.toLowerCase();
-  canvas.addEventListener('pointerdown', () => {
+  let cutsceneClickGuard = null;
+  // A new physical press is intentional; only the release-click from skipping is blocked.
+  document.addEventListener('pointerdown', () => { cutsceneClickGuard = null; }, true);
+  document.addEventListener('click', event => {
+    const guard = cutsceneClickGuard;
+    if (!guard || event.detail === 0) return;
+    if (performance.now() > guard.until) { cutsceneClickGuard = null; return; }
+    if (event.pointerId === guard.id || Math.hypot(event.clientX - guard.x, event.clientY - guard.y) < 6) {
+      cutsceneClickGuard = null;
+      event.preventDefault(); event.stopImmediatePropagation();
+    }
+  }, true);
+  canvas.addEventListener('pointerdown', event => {
     if (!cutscene) return;
+    event.preventDefault(); event.stopPropagation();
+    canvas.setPointerCapture?.(event.pointerId);
     if (cutscene.awaitingStart) startCutsceneWithSound();
-    else skipCutscene();
+    else {
+      cutsceneClickGuard = { id: event.pointerId, x: event.clientX, y: event.clientY, until: performance.now() + 600 };
+      skipCutscene();
+    }
   });
   const pauseButton = document.querySelector('#pauseButton');
   pauseButton.title = 'Пауза · P / З / Esc';
@@ -1691,50 +1641,22 @@
     haptic('soft');
   }
 
-  function dash() {
-    if (!running || !gameState.dash || player.dashCooldown > 0) return;
-    player.dash = 0.29;
-    player.dashCooldown = 1.0;
-    player.invuln = 0.38;
-    player.dodgeReady = true;
-    const dashStartX = player.x;
-    player.x = clamp(player.x + player.face * 158, 44, worldWidth - 44);
-    if (!prefersReducedMotion) {
-      const dashDistance = player.x - dashStartX;
-      for (let i = 1; i <= 5; i++) {
-        const progress = i / 6;
-        dashStains.push({ x: dashStartX + dashDistance * progress, y: player.y + 4, life: 0.62, maxLife: 0.62, size: 3.5 + (i % 2) * 1.4 });
-      }
-    }
-    hitTargets(80, 32, 52);
-    burst(player.x - player.face * 42, player.y - 24, '#ff342b', 15);
-    sound('dash');
-    haptic('medium');
-  }
+  function dash() {}
 
   function whip() {
-    if (!running || !gameState.whip || player.whipCooldown > 0) return;
+    if (!running || !chapterAbilities().special || player.whipCooldown > 0) return;
     player.whipCooldown = 1.05;
     player.attack = 0.34;
     player.attackPose = 'whip';
     player.attackDuration = 0.34;
-    hitTargets(186, 24, 54);
+    const upgraded = chapterAbilities().upgraded;
+    hitTargets(upgraded ? 225 : 186, upgraded ? 68 : 38, 54);
+    toast = chapterAbilities().specialName; toastTime = .55;
     for (let i = 0; i < 8; i++) burst(player.x + player.face * (36 + i * 13), player.y - 42 + Math.sin(i) * 9, '#ff7867', 1);
     sound('whip');
   }
 
-  function heavyPunch() {
-    if (!running || !gameState.heavy || player.heavyCooldown > 0) return;
-    player.heavyCooldown = 1.35;
-    player.attack = 0.4;
-    player.attackDuration = 0.4;
-    player.attackPose = 'heavy';
-    hitTargets(112, 48, 64);
-    shake = 8;
-    burst(player.x + player.face * 55, player.y - 44, '#ffbd68', 16);
-    sound('heavy');
-    haptic('heavy');
-  }
+  function heavyPunch() {}
 
   function hitTargets(range, damage, depth) {
     let enemyHit = false;
@@ -1932,7 +1854,8 @@
         player.x += (right ? 1 : -1) * 222 * dt * (player.slowTime > 0 ? .62 : 1);
         player.face = right ? 1 : -1;
       }
-      if (up !== down) player.y += (down ? 1 : -1) * 128 * dt * (player.slowTime > 0 ? .62 : 1);
+      if (up !== down && !(levels[levelIndex].finale && !bossSpawned)) player.y += (down ? 1 : -1) * 128 * dt * (player.slowTime > 0 ? .62 : 1);
+      if (levels[levelIndex].finale && !bossSpawned) player.y = 452;
     }
     const livingEnemies = enemies.some(enemy => enemy.alive);
     const maxX = boss?.alive ? boss.x - 48 : livingEnemies && fightGate > 0 ? fightGate : worldWidth - 42;
@@ -2468,13 +2391,13 @@
   }
 
   function kick() {
-    if (!running || player.kickCooldown > 0) return;
+    if (!running || !chapterAbilities().kick || player.kickCooldown > 0) return;
     player.kickCooldown = 0.72;
     player.attackPose = 'kick';
     player.attack = 0.32;
     player.attackDuration = 0.32;
     player.combo = 0; player.comboTime = 0;
-    const connected = hitTargets(118, 42, 48);
+    const connected = hitTargets(118, levelIndex >= 2 ? 52 : 42, 48);
     if (connected) { player.finisher = prefersReducedMotion ? 0.12 : 0.2; shake = Math.max(shake, 4); }
     burst(player.x + player.face * 52, player.y - 20, '#ffbd68', connected ? 13 : 6);
     toast = connected ? 'УДАР НОГОЙ!' : 'УДАР НОГОЙ'; toastTime = 0.55;
@@ -2483,12 +2406,12 @@
 
   function updateFinale() {
     for (const obstacle of finaleObstacles) {
-      if (!obstacle.cleared && player.x >= obstacle.x - 26) {
+      if (!obstacle.cleared && player.x >= obstacle.x - 8) {
         obstacle.cleared = true;
-        if (player.z > -48) {
+        if (player.z > -54) {
           damagePlayer(14, obstacle.x);
           player.x = Math.max(42, player.x - 48);
-          toast = 'ПРЫГАЙ ЧЕРЕЗ ГОРЯЧИЕ ПРОТИВНИ';
+          toast = 'ПРЫГАЙ ЧЕРЕЗ ОГНЕННЫЕ ПЛИТЫ';
           toastTime = 1.2;
         } else {
           sound('pickup');
@@ -2519,9 +2442,7 @@
     }
     boss.state = 'defeated';
     gameState.shards = Math.max(gameState.shards, levelIndex + 1);
-    if (levelIndex === 0) gameState.dash = true;
-    if (levelIndex === 1) gameState.whip = true;
-    if (levelIndex === 2) gameState.heavy = true;
+    gameState.dash = false; gameState.heavy = false;
     gameState.maxLevel = Math.max(gameState.maxLevel, levelIndex + 1);
     gameState.currentLevel = Math.min(levelIndex + 1, levels.length - 1);
     gameState.checkpoint = null;
@@ -2531,9 +2452,10 @@
     const stage = levels[levelIndex];
     preloadStageArt(Math.min(levelIndex + 1, levels.length - 1));
     const abilityGuides = [
-      'РЫВОК ОГНЁМ — короткий неуязвимый рывок сквозь опасность. ПК: K или X (Л или Ч) · телефон: кнопка «РЫВОК».',
-      'СОУСНЫЙ ХЛЫСТ — дальняя атака по врагам перед каплей. ПК: L (Д) · телефон: кнопка «ХЛЫСТ».',
-      'МОЩНЫЙ УДАР — медленный, но сильный удар. ПК: I (Ш) · телефон: кнопка «ТЯЖ».',
+      'Теперь доступен удар ногой. ПК: V · телефон: «НОГА» · геймпад: RB.',
+      'Тот же удар ногой стал сильнее. Новая кнопка не нужна.',
+      'Рука вытягивается вперёд. ПК: L · телефон: «ХЛЫСТ» · геймпад: LB.',
+      'Огненный кулак заменяет хлыст: больше дальность и урон. Та же кнопка L / LB.'
     ];
     const abilityText = stage.ability ? ` НОВАЯ СПОСОБНОСТЬ: ${stage.ability}! ${abilityGuides[levelIndex]}` : '';
     pendingBossVictory = { stage, abilityText };
@@ -2573,8 +2495,8 @@
     showOverlay('КАПЛЯ РАСТЕКЛАСЬ', canResume ? 'Выбери, как продолжить: вернуться к последней контрольной точке или начать забег с первой кухни. Новый забег сбросит осколки и способности.' : 'Выбери, как продолжить: повторить этот этап или начать забег с первой кухни. Новый забег сбросит осколки и способности.', canResume ? 'С КОНТРОЛЬНОЙ ТОЧКИ' : 'ПОВТОРИТЬ ЭТАП', () => startLevel(levelIndex, canResume));
     if (returnToTitleButton) {
       returnToTitleButton.hidden = false;
-      returnToTitleButton.textContent = 'НАЧАТЬ ЗАНОВО · С ПЕРВОЙ КУХНИ';
-      returnToTitleButton.onclick = restartCampaign;
+      returnToTitleButton.textContent = 'ВЫБРАТЬ УРОВЕНЬ';
+      returnToTitleButton.onclick = showTitle;
     }
   }
 
@@ -2823,20 +2745,26 @@
 
   function drawFinaleObstacles() {
     for (const obstacle of finaleObstacles) {
-      if (obstacle.cleared) continue;
-      const bob = Math.sin(time * 5 + obstacle.x) * 2;
-      ctx.save();
-      ctx.translate(obstacle.x, 421 + bob);
-      ctx.fillStyle = '#090609a8';
-      ctx.beginPath(); ctx.ellipse(0, 8, 39, 9, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#282023';
-      ctx.beginPath(); ctx.moveTo(-33, -3); ctx.lineTo(-27, -31); ctx.lineTo(25, -31); ctx.lineTo(34, -3); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#f05a42'; ctx.lineWidth = 3; ctx.stroke();
-      ctx.fillStyle = '#ef543c';
-      ctx.beginPath(); ctx.moveTo(-23, -30); ctx.lineTo(-14, -47); ctx.lineTo(-7, -31); ctx.lineTo(2, -50); ctx.lineTo(10, -30); ctx.lineTo(19, -43); ctx.lineTo(23, -29); ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = 0.72 + Math.sin(time * 9 + obstacle.x) * 0.2;
-      ctx.strokeStyle = '#ffd197'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(-19, -13); ctx.lineTo(19, -13); ctx.stroke();
+      ctx.save(); ctx.translate(obstacle.x, 459);
+      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(0, 4, 55, 9, 0, 0, Math.PI * 2); ctx.fill();
+      if (art.hotplate.complete && art.hotplate.naturalWidth) {
+        const width = 122, height = width * art.hotplate.naturalHeight / art.hotplate.naturalWidth;
+        const cut = .45, sway = prefersReducedMotion ? 0 : Math.sin(time * 9 + obstacle.x) * height * .045;
+        ctx.drawImage(art.hotplate, 0, art.hotplate.naturalHeight * cut, art.hotplate.naturalWidth, art.hotplate.naturalHeight * (1 - cut), -width / 2, -height + height * cut, width, height * (1 - cut));
+        ctx.drawImage(art.hotplate, 0, 0, art.hotplate.naturalWidth, art.hotplate.naturalHeight * cut, -width / 2, -height + sway, width, height * cut - sway);
+      }
+      if (!prefersReducedMotion) {
+        for (let i = 0; i < 6; i++) {
+          const phase = (time * .8 + i * .17 + obstacle.x * .001) % 1;
+          ctx.globalAlpha = (1 - phase) * .7;
+          ctx.fillStyle = i % 2 ? '#ffe7a0' : '#ff8937';
+          const x = Math.sin(i * 3 + time) * 36 + phase * 7;
+          ctx.beginPath(); ctx.moveTo(x, -29 - phase * 60); ctx.lineTo(x - 2, -33 - phase * 60); ctx.lineTo(x + 2, -37 - phase * 60); ctx.closePath(); ctx.fill();
+        }
+        ctx.globalAlpha = .2 + Math.sin(time * 8 + obstacle.x) * .06;
+        ctx.strokeStyle = '#ffd8a0'; ctx.lineWidth = 1;
+        for(let i = 0; i < 3; i++){const x=-25+i*25;ctx.beginPath();ctx.moveTo(x,-55);ctx.bezierCurveTo(x-4,-65,x+5,-75,x,-85);ctx.stroke()}
+      }
       ctx.restore();
     }
   }
@@ -2960,7 +2888,12 @@
       if (whipping && art.heroPunch.complete && art.heroPunch.naturalWidth) {
         const reach = Math.sin(Math.PI * Math.pow(attackProgress, .65));
         ctx.save(); ctx.translate(width * .21, -height * .43);
-        const extension = .65 + reach * 2.5;
+        const extension = .65 + reach * (chapterAbilities().upgraded ? 3.1 : 2.5);
+        if (chapterAbilities().upgraded) {
+          ctx.save(); ctx.translate(20 + 38 * extension, 0); ctx.rotate(Math.PI / 2); ctx.globalAlpha *= reach * .9;
+          drawBossIngredient('flame', .72); ctx.restore();
+          ctx.shadowColor = '#ff8d36'; ctx.shadowBlur = 16;
+        }
         ctx.drawImage(art.heroPunch, art.heroPunch.naturalWidth * .60, art.heroPunch.naturalHeight * .46, art.heroPunch.naturalWidth * .23, art.heroPunch.naturalHeight * .24, -7, -17, 38 * extension, 35);
         // Stretch the sauce forearm only; the fist keeps its natural proportions.
         ctx.drawImage(art.heroPunch, art.heroPunch.naturalWidth * .82, art.heroPunch.naturalHeight * .46, art.heroPunch.naturalWidth * .18, art.heroPunch.naturalHeight * .24, -7 + 38 * extension, -17, 29, 35);
@@ -3094,28 +3027,20 @@
   }
 
   function drawBurgerBoss() {
-    const attack = boss.state === 'attack' ? Math.sin(Math.PI * clamp(1 - boss.timer / (boss.attackDuration || .52), 0, 1)) : 0;
-    const breath = prefersReducedMotion ? 0 : Math.sin(time * 3) * .018;
-
-    ctx.save(); ctx.translate(boss.x - attack * 28, boss.y);
-    ctx.fillStyle = '#0009'; ctx.beginPath(); ctx.ellipse(0, 6, 105, 14, 0, 0, Math.PI * 2); ctx.fill();
-    if (boss.state === 'tell') { text('!', -105, -205, 34, '#ff795f', 'center', 950); }
-    ctx.scale(1 + breath + attack * .06, 1 - breath - attack * .08);
-    ctx.strokeStyle = '#472218'; ctx.lineWidth = 4;
-    const bun = ctx.createLinearGradient(0, -190, 0, -80); bun.addColorStop(0, '#ffe09a'); bun.addColorStop(.45, '#eaa04e'); bun.addColorStop(1, '#a64c26');
-    ctx.fillStyle = bun; ctx.beginPath(); ctx.moveTo(-104, -119); ctx.bezierCurveTo(-102,-220,102,-220,104,-119); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#fff0bd';
-    for(let i=0;i<19;i++){ const x=Math.sin(i*2.4)*80, y=-132-Math.abs(Math.cos(i*1.8))*48; ctx.beginPath(); ctx.ellipse(x,y,4,1.7,i*.6,0,Math.PI*2); ctx.fill(); }
-    rounded(-104,-117,208,19,8,'#83a33a');
-    for(let i=0;i<8;i++){ ctx.fillStyle=i%2?'#bdc746':'#537a29'; ctx.beginPath(); ctx.moveTo(-105+i*29,-115); ctx.lineTo(-88+i*29,-89); ctx.lineTo(-72+i*29,-115); ctx.fill(); }
-    rounded(-101,-98,202,15,6,'#dc4132'); rounded(-104,-82,208,28,12,'#542a20');
-    ctx.fillStyle='#ffd062'; ctx.beginPath(); ctx.moveTo(-105,-83); ctx.lineTo(103,-83); ctx.lineTo(81,-59); ctx.lineTo(43,-72); ctx.lineTo(5,-49); ctx.lineTo(-30,-70); ctx.lineTo(-84,-58); ctx.closePath(); ctx.fill();
-    rounded(-100,-53,200,25,9,'#653025');
-    ctx.fillStyle= bun; ctx.beginPath(); ctx.moveTo(-102,-27); ctx.lineTo(102,-27); ctx.quadraticCurveTo(99,8,0,8); ctx.quadraticCurveTo(-99,8,-102,-27); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#fff1c9'; ctx.beginPath(); ctx.ellipse(-35,-141,13,17,-.2,0,Math.PI*2); ctx.ellipse(35,-141,13,17,.2,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#351d1b'; ctx.beginPath(); ctx.ellipse(-31,-138,5,10,0,0,Math.PI*2); ctx.ellipse(31,-138,5,10,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#472218'; ctx.lineWidth=7; ctx.beginPath(); ctx.moveTo(-53,-163); ctx.lineTo(-20,-154); ctx.moveTo(53,-163); ctx.lineTo(20,-154); ctx.stroke();
+    const attacking = boss.state === 'attack';
+    const progress = attacking ? clamp(1 - boss.timer / (boss.attackDuration || .52), 0, 1) : 0;
+    const pulse = Math.sin(progress * Math.PI), breath = prefersReducedMotion ? 0 : Math.sin(time * 2.7) * .018;
+    ctx.save(); ctx.fillStyle = '#0008'; ctx.beginPath(); ctx.ellipse(boss.x, boss.y + 6, 73, 11, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.translate(boss.x - pulse * 24, boss.y + pulse * 2);
+    ctx.rotate(prefersReducedMotion ? 0 : -pulse * .07 + breath);
+    ctx.scale(1 + breath + pulse * .045, 1 - breath - pulse * .055);
+    if (boss.stun > 0) ctx.filter = 'brightness(1.45)';
+    if (art.burger.complete && art.burger.naturalWidth) {
+      const height = 234, width = height * art.burger.naturalWidth / art.burger.naturalHeight;
+      ctx.drawImage(art.burger, -width / 2, -height, width, height);
+    }
     ctx.restore();
+    if (boss.state === 'tell') text('!', boss.x - 100, boss.y - 235, 30, '#ffb472', 'center', 950);
   }
 
   function drawBossIngredient(kind, size = 1, phase = 0) {
@@ -3514,13 +3439,15 @@
     const cooldowns = {
       attack: { remaining: player.attackCooldown, duration: 0.38, unlocked: true },
       dash: { remaining: player.dashCooldown, duration: 1, unlocked: gameState.dash },
-      whip: { remaining: player.whipCooldown, duration: 1.05, unlocked: gameState.whip },
+      whip: { remaining: player.whipCooldown, duration: 1.05, unlocked: chapterAbilities().special },
       heavy: { remaining: player.heavyCooldown, duration: 1.35, unlocked: gameState.heavy },
-      kick: { remaining: player.kickCooldown, duration: 0.72, unlocked: true }
+      kick: { remaining: player.kickCooldown, duration: 0.72, unlocked: chapterAbilities().kick }
     };
     document.querySelectorAll('#mobileControls [data-press]').forEach(button => {
       const action = cooldowns[button.dataset.press];
       if (!action) return;
+      button.hidden = !action.unlocked;
+      if (button.dataset.press === 'whip') { button.textContent = chapterAbilities().upgraded ? 'ОГОНЬ' : 'ХЛЫСТ'; button.setAttribute('aria-label', chapterAbilities().specialName); }
       if (button.dataset.press === 'kick') {
         const label = 'НОГА';
         const accessibleLabel = 'Удар ногой';
@@ -3541,10 +3468,8 @@
   function drawAbilityBar() {
     const actions = [
       { key: 'J/О', name: 'УДАР', cooldown: player.attackCooldown, duration: 0.38 },
-      gameState.dash && { key: 'K/Л', name: 'РЫВОК', cooldown: player.dashCooldown, duration: 1 },
-      gameState.whip && { key: 'L/Д', name: 'ХЛЫСТ', cooldown: player.whipCooldown, duration: 1.05 },
-      gameState.heavy && { key: 'I/Ш', name: 'ТЯЖЁЛЫЙ', cooldown: player.heavyCooldown, duration: 1.35 },
-      { key: 'V/М', name: 'УДАР НОГОЙ', cooldown: player.kickCooldown, duration: 0.72 }
+      chapterAbilities().special && { key: 'L/Д', name: chapterAbilities().upgraded ? 'ОГОНЬ' : 'ХЛЫСТ', cooldown: player.whipCooldown, duration: 1.05 },
+      chapterAbilities().kick && { key: 'V/М', name: 'НОГА', cooldown: player.kickCooldown, duration: 0.72 }
     ].filter(Boolean);
     const width = 96;
     const gap = 5;

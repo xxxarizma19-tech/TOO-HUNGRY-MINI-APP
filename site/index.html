@@ -113,6 +113,7 @@
     .mobile-controls .hit { width:62px; height:62px; background:#a52b27d9; }
     .mobile-controls .dash { border-color:#ff5149; color:#ff7268; font-size:clamp(7px,1.6vw,9px); letter-spacing:-.025em; }
     .mobile-controls .jump { border-color:#e3b778; color:#ffd49b; }
+    .mobile-controls button[hidden] { display:none !important; }
     .mobile-controls button[data-press="jump"]::after { opacity:.42; }
     .mobile-controls .utility { width:46px; height:46px; font-size:clamp(7px,1.6vw,9px); letter-spacing:-.025em; }
     .mobile-controls button[data-press="kick"] { border-color:#ff9b72; color:#ffd0a2; }
@@ -128,12 +129,19 @@
     .rotate-copy strong { color:#fff0dc; font-size:10px; letter-spacing:.12em; }
     .rotate-copy small { margin-top:4px; color:#b7a59d; font-size:8px; letter-spacing:.08em; }
     @keyframes phone-turn { 0%,15%,100% { transform:rotate(0); } 45%,75% { transform:rotate(90deg); } }
-    @media (pointer:coarse), (max-width:700px) { body { align-items:start; } .frame { width:100%; padding:4px; } .fullscreen-toggle { display:grid; } .audio-controls { gap:4px; } .handedness-toggle { display:block; } .mobile-controls { display:none; inset-inline:6px; bottom:max(8px,env(safe-area-inset-bottom)); gap:2px; } .playing .mobile-controls { display:flex; } .mobile-controls button { width:clamp(34px,8vw,48px); height:clamp(34px,8vw,48px); font-size:13px; } .mobile-controls .utility { width:clamp(30px,7vw,42px); height:clamp(30px,7vw,42px); font-size:9px; } .mobile-controls .hit { width:clamp(44px,10vw,58px); height:clamp(44px,10vw,58px); font-size:9px; } .mobile-controls .dash { width:clamp(36px,8vw,48px); height:clamp(36px,8vw,48px); } .pad,.actions { gap:3px; } .game-pause { top:5px; left:5px; right:auto; width:clamp(32px,8vw,40px); height:clamp(32px,8vw,40px); } .game-pause.is-left-handed { left:auto; right:5px; } .subtitle { display:none; } .topline { padding:3px 4px 8px; } .footer { padding-bottom:env(safe-area-inset-bottom); font-size:8px; } .overlay { padding:8px; } .panel { padding:clamp(12px,4vw,24px); max-height:90dvh; overflow:auto; } .desc { font-size:clamp(11px,3vw,14px); line-height:1.4; margin-bottom:12px; } .hint { margin-top:10px; font-size:9px; } .campaign-route { gap:3px; margin-bottom:11px; } .route-stop { padding:7px 3px 6px; } .route-name { font-size:7px; } .route-boss,.route-track,.route-state { font-size:6px; } .sauce-icon { width:38px; height:46px; margin-bottom:6px; } h1 { font-size:clamp(25px,7vw,40px); } }
+    @media (pointer:coarse), (max-width:700px) { body { align-items:start; } .frame { width:100%; padding:4px; } .fullscreen-toggle { display:grid; } .audio-controls { gap:4px; } .handedness-toggle { display:block; } .mobile-controls { display:none; inset-inline:6px; bottom:max(8px,env(safe-area-inset-bottom)); gap:2px; } .playing .mobile-controls { display:flex; } .mobile-controls button { width:clamp(34px,8vw,48px); height:clamp(34px,8vw,48px); font-size:13px; } .mobile-controls .utility { width:clamp(30px,7vw,42px); height:clamp(30px,7vw,42px); font-size:9px; } .mobile-controls .hit { width:clamp(44px,10vw,58px); height:clamp(44px,10vw,58px); font-size:9px; } .mobile-controls .dash { width:clamp(36px,8vw,48px); height:clamp(36px,8vw,48px); } .pad,.actions { gap:3px; } .game-pause { top:5px; left:5px; right:auto; width:clamp(32px,8vw,40px); height:clamp(32px,8vw,40px); } .game-pause.is-left-handed { left:auto; right:5px; } .subtitle { display:none; } .topline { padding:3px 4px 8px; } .footer { padding-bottom:env(safe-area-inset-bottom); font-size:8px; } .overlay { padding:8px; } .panel { padding:clamp(12px,4vw,24px); max-height:100%; overflow:auto; } .desc { font-size:clamp(11px,3vw,14px); line-height:1.4; margin-bottom:12px; } .hint { margin-top:10px; font-size:9px; } .campaign-route { gap:3px; margin-bottom:11px; } .route-stop { padding:7px 3px 6px; } .route-number { font-size:14px; } .route-name { font-size:8px; } .route-boss,.route-track,.route-state { font-size:6px; } .sauce-icon { width:38px; height:46px; margin-bottom:6px; } h1 { font-size:clamp(25px,7vw,40px); } }
     @media (pointer:coarse) and (orientation:portrait) { .playing .rotate-hint { display:flex; } }
     @media (pointer:coarse) and (orientation:landscape) { body { align-items:center; min-height:100dvh; } .frame { width:min(100vw,calc((100dvh - 68px) * 1.7778)); padding:4px; } .topline { padding:0 2px 4px; } .footer { padding-top:4px; padding-bottom:env(safe-area-inset-bottom); } }
     @media (max-width:380px) { .brand { gap:5px; font-size:10px; letter-spacing:.08em; } .audio-controls { gap:2px; } .audio-toggle.sfx-toggle,.audio-mixer summary { width:32px; } .audio-mixer summary { font-size:8px; } }
     @media (prefers-reduced-motion:reduce) { .overlay,.panel,.sauce-icon,.rotate-mark,.run-grade,.run-grade-mark { animation:none; } .audio-toggle,.primary,.route-stop { transition:none; } }
     @media (pointer:coarse), (max-width:700px) { .save-transfer { margin-top:10px; gap:5px; } .save-transfer button { padding:8px 7px; font-size:8px; } .save-transfer-hint { font-size:8px; } }
+    @media (pointer:coarse), (max-width:700px) {
+      .panel.is-level-menu { padding:12px; }
+      .panel.is-level-menu > .sauce-icon,.panel.is-level-menu > .eyebrow:not(#routeLabel) { display:none; }
+      .panel.is-level-menu h1 { font-size:28px; margin:4px 0 9px; }
+      .panel.is-level-menu .desc { font-size:11px; line-height:1.35; margin:0 auto 11px; }
+      .panel.is-level-menu .campaign-route { margin-bottom:10px; }
+    }
   </style>
 </head>
 <body>
@@ -150,8 +158,9 @@
           <h1 id="overlayTitle">TOO HUNGRY</h1>
           <p id="overlayDesc" class="desc">Шеф XARIZMA19 хотел добавить в блюдо соус TOO HUNGRY. Капля промахнулась — теперь ей самой предстоит пройти четыре кухни и добраться до главного бургера.</p>
           <div id="runGradeBadge" class="run-grade" role="status" aria-live="polite" aria-atomic="true" aria-label="Ранг прохождения" hidden><span id="runGradeMark" class="run-grade-mark">S</span><span class="run-grade-copy"><strong id="runGradeTitle">XARIZMA19 · ЛЕГЕНДА</strong><small id="runGradeDetails"></small></span></div>
-          <div class="eyebrow" style="margin:-5px 0 8px;font-size:8px;letter-spacing:.17em">ПУТЬ К БЛЮДУ · ЭТАПЫ / БОССЫ / ТРЕКИ</div>
+          <div id="routeLabel" class="eyebrow" style="margin:-5px 0 8px;font-size:9px;letter-spacing:.12em">ВЫБЕРИ ОТКРЫТЫЙ УРОВЕНЬ</div>
           <div id="campaignRoute" class="campaign-route" aria-label="Карта кампании"></div>
+          <p id="albumGreeting" hidden style="margin:0 0 12px;color:#ffd4a0;font-size:16px;font-weight:800">Приятного прослушивания!</p>
           <a id="albumButton" class="primary album-link" href="https://band.link/2wXiC" target="_blank" rel="noopener" hidden>СЛУШАТЬ АЛЬБОМ</a>
           <button id="shareRunButton" class="share-button" type="button" hidden>ПОДЕЛИТЬСЯ ЗАБЕГОМ</button>
           <button id="startButton" class="primary">НАЧАТЬ ЗАБЕГ</button>
@@ -170,7 +179,7 @@
   </main>
   <div class="rotate-hint" role="status" aria-live="polite"><span class="rotate-mark" aria-hidden="true">↻</span><span class="rotate-copy"><strong>ПОВЕРНИ ТЕЛЕФОН</strong><small>АРЕНА ШИРЕ В АЛЬБОМНОМ РЕЖИМЕ</small></span></div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="game.js?v=186"></script>
+<script src="game.js?v=187"></script>
 <script>
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
