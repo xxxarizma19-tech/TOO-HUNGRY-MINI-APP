@@ -1,4 +1,4 @@
-const CACHE_NAME = 'too-hungry-last-drop-v183';
+const CACHE_NAME = 'too-hungry-last-drop-v184';
 const ROOT = new URL('./', self.location.href);
 const SHELL = [
   '',

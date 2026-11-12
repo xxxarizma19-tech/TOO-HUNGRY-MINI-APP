@@ -1046,6 +1046,12 @@
   }
 
   function playCutscene() {
+    running = false;
+    music.pause();
+    keys.clear();
+    touchAttackTimers.forEach(timer => window.clearInterval(timer));
+    touchAttackTimers.clear();
+    Object.keys(touch).forEach(direction => { touch[direction] = false; });
     stopTitleAttract();
     stopMenuGamepadNavigation();
     prepareCutsceneGamepad();
@@ -1500,7 +1506,8 @@
     gameState.runFinished = false;
     gameState.lastRunIsRecord = false;
     saveProgress();
-    startLevel(0);
+    playCutscene();
+    startCutsceneWithSound();
   }
 
   function formatTime(seconds) {
@@ -3463,7 +3470,7 @@
     saveProgress();
     announce('Основное сохранение было повреждено. Игра восстановила последнюю резервную копию.');
   }
-  if (!gameState.introSeen) playCutscene();
+  playCutscene();
 
   function initializeTelegramShell() {
     if (!telegramApp) return;
