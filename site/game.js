@@ -53,9 +53,9 @@
   const compactHudResizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(updateCompactHudScale) : null;
   compactHudResizeObserver?.observe(canvas);
   const telegramApp = window.Telegram?.WebApp;
-  const desktopControlHint = '4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · V (М) — перечная бомба · M (Ь) — музыка · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст · RB бомба · Start пауза';
-  const touchControlHint = 'Слева — движение и кнопка паузы · справа — прыжок, атаки и бомба<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Подбирай перечные бомбы: они оглушают группу врагов';
-  const leftHandedTouchControlHint = 'Справа — движение и кнопка паузы · слева — прыжок, атаки и бомба<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Подбирай перечные бомбы: они оглушают группу врагов';
+  const desktopControlHint = '4 кухни · растущие волны врагов · босс после зачистки<br>WASD / стрелки — движение · Space — прыжок · J / Z (О / Я) — удар (удерживай для серии)<br>K / X (Л / Ч) — рывок · L (Д) — хлыст · I (Ш) — мощный удар · V (М) — удар ногой · M (Ь) — музыка · P (З) / Esc — пауза<br>Геймпад: стик · A прыжок · B удар · X рывок · Y мощный · LB хлыст · RB удар ногой · Start пауза';
+  const touchControlHint = 'Слева — движение и пауза · справа — прыжок, атаки и удар ногой<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Подбирай соус и хилки, чтобы восстановить здоровье';
+  const leftHandedTouchControlHint = 'Справа — движение и пауза · слева — прыжок, атаки и удар ногой<br>УДАР (удерживать) — серия атак · ↑ — прыжок<br>Подбирай соус и хилки, чтобы восстановить здоровье';
   let leftHandedControls = false;
   try { leftHandedControls = localStorage.getItem('tooHungryLeftHanded') === 'true'; } catch { /* The layout preference can stay session-only if storage is blocked. */ }
   function syncHandednessToggle() {
@@ -221,7 +221,7 @@
   let gameState = loadProgress();
   let musicEnabled = gameState.musicEnabled !== false;
   let levelIndex = Math.min(gameState.maxLevel, levels.length - 1);
-  let player, enemies, boss, hazards, particles, drops, thrownItems = [], damageNumbers = [], finaleObstacles = [], dashStains = [];
+  let player, enemies, boss, hazards, particles, drops, damageNumbers = [], finaleObstacles = [], dashStains = [];
   let cameraX = 0, worldWidth = W, waveIndex = -1, nextWaveAt = 620, fightGate = 0, wavesCleared = 0, enemiesDefeated = 0, totalEnemies = 0, waveQueue = [], waveKills = 0, waveReinforcementAt = 0, bossSpawned = false, bossIntro = 0;
   let running = false, playerMoving = false, time = 0, lastTime = 0, shake = 0, hitStop = 0, toast = '', toastTime = 0, stageIntroTime = 0, saveTimer = 0, streakKills = 0, streakTime = 0, sauceRushTime = 0, sauceRushMaxTime = 0, perfectDodgeTime = 0, counterTime = 0, attractAnimationFrame = 0, attractStartedAt = 0;
   let cutscene = null, pendingBossVictory = null;
@@ -374,7 +374,7 @@
 
   function newPlayer() {
     const maxHp = gameState.secretSeen ? 119 : 100;
-    return { x: 145, y: 420, z: 0, vz: 0, jumpBuffer: 0, coyoteTime: 0, landingFx: 0, hp: maxHp, hpTrail: maxHp, maxHp, face: 1, attack: 0, attackPose: '', attackDuration: 0, attackCooldown: 0, dash: 0, dashCooldown: 0, whipCooldown: 0, heavyCooldown: 0, throwables: 1, throwCooldown: 0, invuln: 0, dodgeReady: false, combo: 0, attackCombo: 0, comboTime: 0, finisher: 0, walk: 0, stepCooldown: 0, hurt: 0 };
+    return { x: 145, y: 420, z: 0, vz: 0, jumpBuffer: 0, coyoteTime: 0, landingFx: 0, hp: maxHp, hpTrail: maxHp, maxHp, face: 1, attack: 0, attackPose: '', attackDuration: 0, attackCooldown: 0, dash: 0, dashCooldown: 0, whipCooldown: 0, heavyCooldown: 0, kickCooldown: 0, invuln: 0, dodgeReady: false, combo: 0, attackCombo: 0, comboTime: 0, finisher: 0, walk: 0, stepCooldown: 0, hurt: 0 };
   }
 
   function startLevel(index, resume = false) {
@@ -416,14 +416,13 @@
     sauceRushMaxTime = 0;
     perfectDodgeTime = 0;
     counterTime = 0;
-    totalEnemies = stage.finale ? 0 : Array.from({ length: stage.waves }, (_, i) => 4 + levelIndex + Math.min(1, i)).reduce((sum, count) => sum + count, 0);
+    totalEnemies = stage.finale ? 0 : Array.from({ length: stage.waves }, (_, i) => 3 + levelIndex + Math.min(1, i)).reduce((sum, count) => sum + count, 0);
     bossSpawned = false;
     bossIntro = 0;
     hazards = [];
     particles = [];
     dashStains = [];
     drops = [];
-    thrownItems = [];
     damageNumbers = [];
     finaleObstacles = stage.finale ? [780, 1510, 2260, 3020].map((x, i) => ({ x, cleared: i < (checkpoint?.obstacles ?? 0) })) : [];
     time = 0;
@@ -647,11 +646,7 @@
       case 'introWake': [440, 660, 880].forEach((note, i) => tone(note, note * 1.12, 0.2, 'sine', 0.055, i * 0.09)); break;
       case 'introStep': tone(155, 72, 0.09, 'triangle', 0.06); noise(0.045, 0.04, 760, 0.015); break;
       case 'introSting': [392, 494, 659, 784].forEach((note, i) => tone(note, note * 1.025, 0.48, 'sine', 0.052, i * 0.095)); break;
-      case 'bombPickup': [520, 760, 1010].forEach((note, i) => tone(note, note * 1.18, 0.12, 'triangle', 0.065, i * 0.065)); break;
-      case 'bombThrow': noise(0.12, 0.09, 1900); tone(390, 170, 0.18, 'triangle', 0.09); break;
       case 'kick': noise(0.08, 0.12, 900); tone(180, 72, 0.16, 'triangle', 0.14); break;
-      case 'bombBurst': noise(0.28, 0.19, 1500); tone(130, 42, 0.42, 'sine', 0.2); tone(680, 260, 0.26, 'sawtooth', 0.07, 0.025); break;
-      case 'enemyStun': tone(920, 470, 0.13, 'sine', 0.055); tone(640, 980, 0.15, 'triangle', 0.04, 0.07); break;
       case 'victory': [523, 659, 784].forEach((note, i) => tone(note, note * 1.15, 0.34, 'sine', 0.09, i * 0.09)); break;
     }
   }
@@ -1617,7 +1612,7 @@
     if (key === 'k' || key === 'x') dash();
     if (key === 'l') whip();
     if (key === 'i') heavyPunch();
-    if (key === 'v' && !event.repeat) throwPepperBomb();
+    if (key === 'v' && !event.repeat) kick();
     if (key === ' ' && !event.repeat) jump();
     if (!running && overlay.style.display !== 'grid' && key === 'enter') {
       event.preventDefault();
@@ -1656,7 +1651,7 @@
       if (action === 'jump') jump();
       if (action === 'whip') whip();
       if (action === 'heavy') heavyPunch();
-      if (action === 'bomb') throwPepperBomb();
+      if (action === 'kick') kick();
     });
     button.addEventListener('pointerup', release);
     button.addEventListener('pointercancel', release);
@@ -1827,7 +1822,6 @@
       }
       const lastEnemyBeforeBoss = !levels[levelIndex].finale && enemiesDefeated >= totalEnemies;
       const guaranteedMedkit = enemiesDefeated === 2 || enemiesDefeated === 3 || lastEnemyBeforeBoss;
-      const pepperBombDrop = false;
       if (enemy.elite || (enemiesDefeated % 4 === 0 && !guaranteedMedkit)) drops.push({ x: clamp(enemy.x + (guaranteedMedkit ? (enemy.x < player.x ? -34 : 34) : 0), 42, worldWidth - 42), y: enemy.y - 24, life: 8, amount: enemy.elite ? 34 + levelIndex * 8 : 22 + levelIndex * 10, elite: enemy.elite });
       if (guaranteedMedkit) {
         drops.push({ type: 'medkit', fullRestore: lastEnemyBeforeBoss, x: enemy.x, y: enemy.y - 32, life: lastEnemyBeforeBoss ? 60 : 30, amount: lastEnemyBeforeBoss ? player.maxHp : Math.ceil(player.maxHp * Math.min(0.62, 0.32 + levelIndex * 0.07)), elite: false });
@@ -1841,13 +1835,6 @@
           announce('Выпала хилка. Подбери её, чтобы восстановить здоровье.');
         }
         sound('pickup');
-      }
-      if (pepperBombDrop) {
-        drops.push({ type: 'pepperBomb', x: enemy.x + (enemy.x < player.x ? -24 : 24), y: enemy.y - 34, life: 35, amount: 1, elite: false });
-        toast = 'ПЕРЕЧНАЯ БОМБА · МОЖНО КИДАТЬ';
-        toastTime = 2;
-        announce('Подобрана перечная бомба. Бросай клавишей V или М, либо кнопкой «БОМБА» на телефоне. Она оглушает врагов рядом.');
-        sound('bombPickup');
       }
       const secretRecipe = gameState.runKills >= 19 && !gameState.secretSeen;
       if (secretRecipe) {
@@ -1907,6 +1894,7 @@
     player.dashCooldown = Math.max(0, player.dashCooldown - dt);
     player.whipCooldown = Math.max(0, player.whipCooldown - dt);
     player.heavyCooldown = Math.max(0, player.heavyCooldown - dt);
+    player.kickCooldown = Math.max(0, player.kickCooldown - dt);
     player.invuln = Math.max(0, player.invuln - dt);
     player.jumpBuffer = Math.max(0, player.jumpBuffer - dt);
     if (player.z === 0 && player.vz === 0) player.coyoteTime = 0.1;
@@ -1972,7 +1960,6 @@
     if (levels[levelIndex].finale) updateFinale(dt);
     updateHazards(dt);
     updateDrops(dt);
-    updateThrownItems(dt);
     if (player.hp <= 0) loseLevel();
   }
 
@@ -1999,7 +1986,7 @@
     if (justPressed(2)) dash();
     if (justPressed(3)) heavyPunch();
     if (justPressed(4)) whip();
-    if (justPressed(5)) throwPepperBomb();
+    if (justPressed(5)) kick();
     gamepadPressed = currentButtons;
     const horizontal = gamepad.axes[0] || 0;
     const vertical = gamepad.axes[1] || 0;
@@ -2373,12 +2360,11 @@
   function updateDrops(dt) {
     for (const drop of drops) {
       drop.life -= dt;
-      const bombPickup = drop.type === 'pepperBomb';
       const pullX = player.x - drop.x;
       const pullY = player.y - 24 - drop.y;
       const distance = Math.hypot(pullX, pullY);
-      const magnetRange = bombPickup ? 120 : drop.fullRestore ? 700 : drop.type === 'medkit' ? 235 : 180;
-      drop.magnetized = bombPickup ? player.throwables < 3 && distance < magnetRange && Math.abs(pullY) < 105 : player.hp < player.maxHp && distance < magnetRange && Math.abs(pullY) < (drop.fullRestore ? 170 : 105);
+      const magnetRange = drop.fullRestore ? 700 : drop.type === 'medkit' ? 235 : 180;
+      drop.magnetized = player.hp < player.maxHp && distance < magnetRange && Math.abs(pullY) < (drop.fullRestore ? 170 : 105);
       if (drop.magnetized && distance > 0.01) {
         const speed = 300 + (magnetRange - Math.min(distance, magnetRange)) * 0.55;
         const step = Math.min(distance, speed * dt);
@@ -2386,18 +2372,6 @@
         drop.y += pullY / distance * step;
       }
       if (Math.abs(player.x - drop.x) < 32 && Math.abs(player.y - drop.y) < 50) {
-        if (bombPickup) {
-          if (player.throwables >= 3) continue;
-          player.throwables = Math.min(3, player.throwables + 1);
-          drop.life = 0;
-          burst(drop.x, drop.y, '#c6ed78', 12);
-          toast = `ПЕРЕЧНАЯ БОМБА ×${player.throwables} · V / М`;
-          toastTime = 1.8;
-          announce(`Перечная бомба подобрана. Осталось бросков: ${player.throwables}. Нажми V или М на клавиатуре, либо кнопку «БОМБА» на телефоне.`);
-          sound('bombPickup');
-          haptic('light');
-          continue;
-        }
         const restored = Math.min(drop.amount, player.maxHp - player.hp);
         player.hp += restored;
         if (restored > 0) spawnDamageNumber(player.x, player.y - 124, restored, false, false, false, true, true);
@@ -2413,9 +2387,9 @@
     drops = drops.filter(drop => drop.life > 0);
   }
 
-  function throwPepperBomb() {
-    if (!running || player.throwCooldown > 0) return;
-    player.throwCooldown = 0.72;
+  function kick() {
+    if (!running || player.kickCooldown > 0) return;
+    player.kickCooldown = 0.72;
     player.attackPose = 'kick';
     player.attack = 0.32;
     player.attackDuration = 0.32;
@@ -2425,48 +2399,6 @@
     burst(player.x + player.face * 67, player.y - 35, '#ffbd68', connected ? 13 : 6);
     toast = connected ? 'УДАР НОГОЙ!' : 'УДАР НОГОЙ'; toastTime = 0.55;
     sound('kick'); haptic(connected ? 'medium' : 'light');
-  }
-
-  function updateThrownItems(dt) {
-    for (const item of thrownItems) {
-      item.life -= dt;
-      item.x += item.vx * dt;
-      item.y += item.vy * dt;
-      item.vy += 590 * dt;
-      item.spin += dt * 14;
-      if (item.life <= 0 && !item.exploded) {
-        item.exploded = true;
-        burst(item.x, item.y, '#c9ef83', 26);
-        burst(item.x, item.y, '#ffbd58', 16);
-        sound('bombBurst');
-        shake = Math.max(shake, 7);
-        let stunnedAny = false;
-        for (const enemy of enemies) {
-          if (!enemy.alive || Math.abs(enemy.x - item.x) > item.radius || Math.abs(enemy.y - item.y) > 100) continue;
-          hurtEnemy(enemy, enemy.elite ? 54 : 76);
-          if (enemy.alive) {
-            enemy.state = 'stunned';
-            enemy.stateTime = 1.35;
-            enemy.attackCooldown = Math.max(enemy.attackCooldown, 0.8);
-            enemy.vx = Math.sign(enemy.x - item.x || player.face) * 260;
-            burst(enemy.x, enemy.y - 48, '#d7f49a', 9);
-            stunnedAny = true;
-          }
-        }
-        if (stunnedAny) sound('enemyStun');
-        if (boss?.alive && bossIntro <= 0 && Math.abs(boss.x - item.x) < item.radius + 12 && Math.abs(boss.y - item.y) < 112) {
-          const damage = 54;
-          boss.hp -= damage;
-          boss.stun = Math.max(boss.stun, 0.72);
-          spawnDamageNumber(boss.x, boss.y - 150, damage, false, false, true);
-          burst(boss.x, boss.y - 64, '#d7f49a', 16);
-          sound('bossHit');
-          if (boss.hp <= 0) winBoss();
-        }
-      }
-    }
-    thrownItems = thrownItems.filter(item => !item.exploded);
-    player.throwCooldown = Math.max(0, player.throwCooldown - dt);
   }
 
   function updateFinale() {
@@ -2629,7 +2561,6 @@
     if (levels[levelIndex].finale) drawFinaleObstacles();
     for (const hazard of hazards) drawHazard(hazard);
     for (const drop of drops) drawDrop(drop);
-    for (const item of thrownItems) drawThrownItem(item);
     for (const enemy of enemies) if (enemy.alive) drawEnemy(enemy);
     if (boss?.alive) drawBoss();
     drawPlayer();
@@ -2900,7 +2831,8 @@
     const isMoving = playerMoving;
     const alternateRunFrame = Math.floor(player.walk / Math.PI) % 2 === 1 && art.heroRunAlt.complete && art.heroRunAlt.naturalWidth;
     const runSprite = alternateRunFrame ? art.heroRunAlt : art.heroRun;
-    const sprite = dodging && art.heroDodge.complete && art.heroDodge.naturalWidth ? art.heroDodge : player.attack > 0 && player.attackPose === 'heavy' && art.heroHeavy.complete && art.heroHeavy.naturalWidth ? art.heroHeavy : player.attack > 0 && player.attackPose === 'whip' && art.heroWhip.complete && art.heroWhip.naturalWidth ? art.heroWhip : player.attack > 0 ? art.heroPunch : player.z < 0 && art.heroJump.complete && art.heroJump.naturalWidth ? art.heroJump : isMoving ? runSprite : art.hero;
+    const kicking = player.attack > 0 && player.attackPose === 'kick';
+    const sprite = dodging && art.heroDodge.complete && art.heroDodge.naturalWidth ? art.heroDodge : player.attack > 0 && player.attackPose === 'heavy' && art.heroHeavy.complete && art.heroHeavy.naturalWidth ? art.heroHeavy : player.attack > 0 && player.attackPose === 'whip' && art.heroWhip.complete && art.heroWhip.naturalWidth ? art.heroWhip : kicking ? art.hero : player.attack > 0 ? art.heroPunch : player.z < 0 && art.heroJump.complete && art.heroJump.naturalWidth ? art.heroJump : isMoving ? runSprite : art.hero;
     if (sprite.complete && sprite.naturalWidth) {
       const bounce = isMoving ? Math.sin(player.walk) * 3 : Math.sin(time * 3.4) * 2;
       const scale = player.z < 0 ? 1.04 : 1;
@@ -2915,8 +2847,10 @@
       ctx.translate(x + player.face * lunge, y + bounce + punchPulse * 2);
       ctx.scale(whipping ? -player.face : player.face, 1);
       if (hurtPulse > 0) ctx.filter = 'brightness(1.55) saturate(.62)';
-      ctx.rotate((player.attack > 0 ? -player.face * punchPulse * 0.055 : 0) + player.face * hurtPulse * 0.09);
-      ctx.scale(1 + punchPulse * 0.045 + hurtPulse * 0.035, 1 - punchPulse * 0.035 - hurtPulse * 0.075);
+      const idleBreath = !isMoving && player.attack <= 0 && !dodging && player.z === 0 && !prefersReducedMotion ? Math.sin(time * 2.4) * 0.016 : 0;
+      const stepSway = isMoving && !prefersReducedMotion ? Math.sin(player.walk * 0.7) * 0.025 : 0;
+      ctx.rotate((player.attack > 0 ? -player.face * punchPulse * 0.055 : 0) + player.face * hurtPulse * 0.09 + stepSway);
+      ctx.scale(1 + punchPulse * 0.045 + hurtPulse * 0.035 + idleBreath, 1 - punchPulse * 0.035 - hurtPulse * 0.075 - idleBreath);
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
     }
@@ -3008,13 +2942,22 @@
   }
 
   function drawEnemy(enemy) {
-    const bob = Math.sin(time * 7 + enemy.swing) * 3;
+    const movement = prefersReducedMotion ? 0 : clamp(Math.abs(enemy.vx) / 140, 0, 1);
+    const idlePulse = prefersReducedMotion ? 0 : Math.sin(time * 2.5 + enemy.swing * 0.24);
+    const stepPulse = prefersReducedMotion ? 0 : Math.sin(time * 11 + enemy.swing);
+    const bob = prefersReducedMotion ? 0 : Math.sin(time * 2.2 + enemy.swing * 0.26) * (1.6 + movement * 2.2) + Math.abs(stepPulse) * movement * 1.2;
     const x = enemy.x, y = enemy.y + bob;
     const indicatorScale = compactControlsQuery?.matches ? clamp(compactHudScale, 1, 1.8) : 1;
     const spawnProgress = enemy.spawn > 0 ? 1 - enemy.spawn / 0.32 : 1;
+    const tellDuration = ((enemy.type === 'pepper' ? 0.3 : enemy.type === 'mozzarella' ? 0.72 : 0.52) + (levelIndex === 0 ? 0.18 : 0)) * (enemy.elite ? enemy.enraged ? 0.64 : 0.82 : 1);
+    const tellProgress = enemy.state === 'tell' ? clamp(1 - enemy.stateTime / tellDuration, 0, 1) : 0;
+    const anticipation = prefersReducedMotion ? 0 : enemy.state === 'tell' ? Math.sin(tellProgress * Math.PI * 0.72) : 0;
+    const attackProgress = enemy.state === 'attack' ? clamp(1 - enemy.stateTime / 0.28, 0, 1) : 0;
+    const attackPulse = prefersReducedMotion ? 0 : Math.sin(attackProgress * Math.PI);
+    const hitPulse = clamp(enemy.hit / 0.22, 0, 1);
     ctx.fillStyle = '#0008';
     ctx.beginPath();
-    ctx.ellipse(x, enemy.y + 5, 23, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, enemy.y + 5, 23 + movement * 3, 7 - movement * 0.8, 0, 0, Math.PI * 2);
     ctx.fill();
     if (enemy.spawn > 0) {
       ctx.save();
@@ -3052,15 +2995,15 @@
     }
     if (sprite?.complete && sprite.naturalWidth) {
       ctx.save();
-      ctx.translate(x, y + Math.sin(enemy.swing * 0.8) * 2);
+      ctx.translate(x + enemy.face * (attackPulse * 13 - anticipation * 3), y + bob - anticipation * 1.5 + attackPulse * 2);
       ctx.globalAlpha *= spawnProgress;
-      ctx.scale(0.76 + spawnProgress * 0.24, 0.76 + spawnProgress * 0.24);
+      const spawnScale = 0.76 + spawnProgress * 0.24;
       if (enemy.hit > 0) ctx.filter = 'brightness(1.8) saturate(.5)';
-      const attackPose = enemy.state === 'tell' ? (enemy.type === 'mozzarella' ? -0.12 : 0.08) : enemy.state === 'attack' ? 0.04 : 0;
-      const recoil = clamp(enemy.hit / 0.22, 0, 1);
-      const lean = Math.max(-0.3, Math.min(0.3, enemy.vx * 0.0007 + attackPose - enemy.face * recoil * 0.16));
+      const lean = clamp(enemy.vx * 0.00055 - enemy.face * anticipation * 0.1 + enemy.face * attackPulse * 0.075 - Math.sign(enemy.knockback) * hitPulse * 0.13 + idlePulse * 0.012, -0.34, 0.34);
       ctx.rotate(lean);
-      ctx.scale(1 + recoil * 0.035, 1 - recoil * 0.045);
+      const squash = anticipation * 0.035 + attackPulse * 0.055 + hitPulse * 0.04;
+      const stretch = anticipation * 0.025 + attackPulse * 0.045 + movement * Math.abs(stepPulse) * 0.012;
+      ctx.scale(spawnScale * (1 + idlePulse * 0.018 + stretch - squash * 0.25), spawnScale * (1 - idlePulse * 0.014 - stretch + squash));
       const spriteWidth = hasAttackFrame ? Math.min(220, 112 * sprite.naturalWidth / sprite.naturalHeight) : 108;
       ctx.drawImage(sprite, -spriteWidth / 2, -112, spriteWidth, 112);
       ctx.restore();
@@ -3271,35 +3214,25 @@
 
   function drawDrop(drop) {
     const medkit = drop.type === 'medkit';
-    const pepperBomb = drop.type === 'pepperBomb';
     const pulse = prefersReducedMotion ? 1 : 0.86 + Math.sin(time * 8 + drop.x) * 0.14;
     ctx.save();
     ctx.globalAlpha = Math.min(1, drop.life) * pulse;
     if (drop.magnetized && !prefersReducedMotion) {
       ctx.save();
       ctx.globalAlpha *= 0.42;
-      ctx.strokeStyle = pepperBomb ? '#d8f29a' : medkit ? '#a8f4bf' : drop.elite ? '#ffd17b' : '#ff9b72';
+      ctx.strokeStyle = medkit ? '#a8f4bf' : drop.elite ? '#ffd17b' : '#ff9b72';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([2, 5]);
       ctx.lineDashOffset = -time * 12;
       ctx.beginPath(); ctx.moveTo(drop.x, drop.y); ctx.lineTo(player.x, player.y - 24); ctx.stroke();
       ctx.restore();
     }
-    if (drop.elite || medkit || pepperBomb) {
-      ctx.strokeStyle = pepperBomb ? '#d8f29a' : medkit ? '#a8f4bf' : '#ffd17b'; ctx.lineWidth = 1.5;
+    if (drop.elite || medkit) {
+      ctx.strokeStyle = medkit ? '#a8f4bf' : '#ffd17b'; ctx.lineWidth = 1.5;
       const ring = prefersReducedMotion ? 14 : 14 + Math.sin(time * 7) * 2;
       ctx.beginPath(); ctx.ellipse(drop.x, drop.y, ring, ring + 3, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    if (pepperBomb) {
-      ctx.fillStyle = '#29421d'; ctx.strokeStyle = '#e0f6a5'; ctx.lineWidth = 2;
-      ctx.shadowColor = '#c6ed78'; ctx.shadowBlur = 16;
-      ctx.beginPath(); ctx.arc(drop.x, drop.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#ffe29a'; ctx.lineWidth = 2.4;
-      ctx.beginPath(); ctx.moveTo(drop.x + 2, drop.y - 8); ctx.quadraticCurveTo(drop.x + 10, drop.y - 17, drop.x + 13, drop.y - 9); ctx.stroke();
-      ctx.fillStyle = '#fff1b2'; ctx.beginPath(); ctx.arc(drop.x + 13, drop.y - 10, 2.2 + Math.sin(time * 18) * 0.7, 0, Math.PI * 2); ctx.fill();
-      text('БОМБА', drop.x, drop.y - 18, 6, '#e8f8b7', 'center', 950);
-    } else if (medkit) {
+    if (medkit) {
       ctx.fillStyle = '#154b37'; ctx.strokeStyle = '#c9ffdb'; ctx.lineWidth = 2;
       ctx.shadowColor = '#8ff0ad'; ctx.shadowBlur = 18;
       ctx.beginPath(); ctx.arc(drop.x, drop.y, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -3313,20 +3246,6 @@
       ctx.shadowBlur = 0;
       text('+', drop.x, drop.y + 5, 8, '#fff2d5', 'center', 950);
     }
-    ctx.restore();
-  }
-
-  function drawThrownItem(item) {
-    ctx.save();
-    ctx.translate(item.x, item.y);
-    ctx.rotate(item.spin);
-    ctx.shadowColor = '#c6ed78'; ctx.shadowBlur = 16;
-    ctx.fillStyle = '#365527'; ctx.strokeStyle = '#e3f7a6'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#ffe29a'; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.moveTo(2, -8); ctx.quadraticCurveTo(10, -17, 13, -9); ctx.stroke();
-    ctx.fillStyle = '#fff1b2'; ctx.beginPath(); ctx.arc(13, -10, 2.3, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
@@ -3533,14 +3452,14 @@
       dash: { remaining: player.dashCooldown, duration: 1, unlocked: gameState.dash },
       whip: { remaining: player.whipCooldown, duration: 1.05, unlocked: gameState.whip },
       heavy: { remaining: player.heavyCooldown, duration: 1.35, unlocked: gameState.heavy },
-      bomb: { remaining: player.throwCooldown, duration: 0.72, unlocked: true }
+      kick: { remaining: player.kickCooldown, duration: 0.72, unlocked: true }
     };
     document.querySelectorAll('#mobileControls [data-press]').forEach(button => {
       const action = cooldowns[button.dataset.press];
       if (!action) return;
-      if (button.dataset.press === 'bomb') {
-        const label = `БОМБА ×${player.throwables}`;
-        const accessibleLabel = `Бросить перечную бомбу, осталось ${player.throwables}`;
+      if (button.dataset.press === 'kick') {
+        const label = 'НОГА';
+        const accessibleLabel = 'Удар ногой';
         if (button.textContent !== label) button.textContent = label;
         if (button.getAttribute('aria-label') !== accessibleLabel) button.setAttribute('aria-label', accessibleLabel);
       }
@@ -3561,7 +3480,7 @@
       gameState.dash && { key: 'K/Л', name: 'РЫВОК', cooldown: player.dashCooldown, duration: 1 },
       gameState.whip && { key: 'L/Д', name: 'ХЛЫСТ', cooldown: player.whipCooldown, duration: 1.05 },
       gameState.heavy && { key: 'I/Ш', name: 'ТЯЖЁЛЫЙ', cooldown: player.heavyCooldown, duration: 1.35 },
-      { key: 'V/М', name: 'УДАР НОГОЙ', cooldown: player.throwCooldown, duration: 0.72 }
+      { key: 'V/М', name: 'УДАР НОГОЙ', cooldown: player.kickCooldown, duration: 0.72 }
     ].filter(Boolean);
     const width = 96;
     const gap = 5;
