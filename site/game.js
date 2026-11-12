@@ -330,11 +330,11 @@
     const stageWidth = stage.finale ? 4200 : 1900 + stage.waves * 1370;
     const playerX = clamp(checkpoint.playerX, 42, stageWidth - 42);
     if (checkpoint.finale === true && stage.finale) {
-      return integer(checkpoint.obstacles, 0, 4) ? { stageIndex, finale: true, playerX, hp: clamp(checkpoint.hp, Math.ceil(maxPlayerHp / 2), maxPlayerHp), obstacles: checkpoint.obstacles, kills: checkpoint.kills, ...(numeric(checkpoint.bossHp, 1, 1600) ? { bossHp: checkpoint.bossHp } : {}) } : null;
+      return integer(checkpoint.obstacles, 0, 4) ? { stageIndex, finale: true, playerX, hp: clamp(checkpoint.hp, Math.ceil(maxPlayerHp / 2), maxPlayerHp), obstacles: checkpoint.obstacles, kills: checkpoint.kills, bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, ...(numeric(checkpoint.bossHp, 1, 1600) ? { bossHp: checkpoint.bossHp } : {}) } : null;
     }
     if (checkpoint.finale === true || stage.finale || !integer(checkpoint.waveIndex, 0, stage.waves)) return null;
     if (checkpoint.boss === true ? checkpoint.waveIndex !== stage.waves : checkpoint.waveIndex >= stage.waves) return null;
-    const normalized = { stageIndex, waveIndex: checkpoint.waveIndex, playerX, hp: checkpoint.hp, kills: checkpoint.kills, boss: checkpoint.boss === true };
+    const normalized = { bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, stageIndex, waveIndex: checkpoint.waveIndex, playerX, hp: checkpoint.hp, kills: checkpoint.kills, boss: checkpoint.boss === true };
     const maxBossHp = 850 + stageIndex * 260;
     if (normalized.boss) normalized.bossHp = numeric(checkpoint.bossHp, 1, maxBossHp) ? checkpoint.bossHp : maxBossHp;
     return normalized;
@@ -601,13 +601,15 @@
       () => { noise(0.22, 0.14, 1800); tone(115, 58, 0.24, 'triangle', 0.16); },
       () => { noise(0.2, 0.11, 2600); tone(760, 220, 0.2, 'sawtooth', 0.08); },
       () => { tone(105, 42, 0.32, 'sine', 0.19); noise(0.1, 0.1, 900, 0.03); },
-      () => { tone(460, 120, 0.34, 'triangle', 0.13); tone(520, 180, 0.38, 'sine', 0.08, 0.04); }
+      () => { tone(460, 120, 0.34, 'triangle', 0.13); tone(520, 180, 0.38, 'sine', 0.08, 0.04); },
+      () => { tone(82, 36, .3, 'triangle', .16); noise(.24, .1, 1500); tone(310, 95, .24, 'sawtooth', .055, .06); }
     ];
     const bossTelegraphSounds = [
       () => { tone(245, 490, 0.14, 'triangle', 0.06); tone(610, 350, 0.16, 'sine', 0.045, 0.08); },
       () => { tone(880, 470, 0.16, 'square', 0.035); noise(0.07, 0.035, 2800, 0.04); },
       () => { tone(150, 68, 0.2, 'sine', 0.1); noise(0.06, 0.06, 700, 0.04); },
-      () => { tone(430, 760, 0.18, 'sawtooth', 0.045); tone(680, 520, 0.18, 'sine', 0.055, 0.06); }
+      () => { tone(430, 760, 0.18, 'sawtooth', 0.045); tone(680, 520, 0.18, 'sine', 0.055, 0.06); },
+      () => { tone(110, 220, .18, 'triangle', .08); tone(330, 165, .2, 'sine', .055, .08); }
     ];
     const enemyDefeatSounds = [
       () => { tone(720, 1260, 0.12, 'square', 0.045); tone(1080, 1720, 0.17, 'sine', 0.06, 0.045); },
@@ -1750,6 +1752,7 @@
     }
     if (boss?.alive && bossIntro <= 0 && Math.abs(boss.x - player.x) < range + 18 && (boss.x - player.x) * player.face > -18 && Math.abs(boss.y - player.y) < depth + 15 && boss.stun <= 0) {
       boss.hp -= hitDamage;
+      dropBossHealing();
       spawnDamageNumber(boss.x, boss.y - 154, hitDamage, false, counterTime > 0, true);
       counterHit = true;
       boss.stun = 0.22;
@@ -1903,6 +1906,7 @@
     if (sauceRushTime <= 0) sauceRushMaxTime = 0;
     if (player.invuln <= 0 && player.dash <= 0) player.dodgeReady = false;
     player.hurt = Math.max(0, player.hurt - dt);
+    player.slowTime = Math.max(0, (player.slowTime || 0) - dt);
     player.comboTime = Math.max(0, player.comboTime - dt);
     streakTime = Math.max(0, streakTime - dt);
     if (streakTime <= 0) streakKills = 0;
@@ -1925,10 +1929,10 @@
     if (player.dash > 0) player.dash = Math.max(0, player.dash - dt);
     else {
       if (left !== right) {
-        player.x += (right ? 1 : -1) * 222 * dt;
+        player.x += (right ? 1 : -1) * 222 * dt * (player.slowTime > 0 ? .62 : 1);
         player.face = right ? 1 : -1;
       }
-      if (up !== down) player.y += (down ? 1 : -1) * 128 * dt;
+      if (up !== down) player.y += (down ? 1 : -1) * 128 * dt * (player.slowTime > 0 ? .62 : 1);
     }
     const livingEnemies = enemies.some(enemy => enemy.alive);
     const maxX = boss?.alive ? boss.x - 48 : livingEnemies && fightGate > 0 ? fightGate : worldWidth - 42;
@@ -2018,10 +2022,10 @@
       const maxHp = levelIndex === 0 ? 680 : 850 + levelIndex * 260;
       const savedBoss = gameState.checkpoint?.stageIndex === levelIndex && gameState.checkpoint?.boss ? gameState.checkpoint : null;
       const hp = Math.min(maxHp, savedBoss?.bossHp ?? maxHp);
-      boss = { x: worldWidth - 205, y: 414, hp, hpTrail: hp, maxHp, alive: true, state: 'idle', timer: 1.25, stun: 0, phase: hp / maxHp > 0.55 ? 1 : hp / maxHp > 0.24 ? 2 : 3, phaseFlash: 0, attack: 1, lastAttack: 0, chainRemaining: 0, hitDone: false };
+      boss = { healMask: savedBoss?.bossHealMask || 0, healCollected: savedBoss?.bossHealMask || 0, x: worldWidth - 205, y: 414, hp, hpTrail: hp, maxHp, alive: true, state: 'idle', timer: 1.25, stun: 0, phase: hp / maxHp > 0.55 ? 1 : hp / maxHp > 0.24 ? 2 : 3, phaseFlash: 0, attack: 1, lastAttack: 0, chainRemaining: 0, hitDone: false };
       bossSpawned = true;
       bossIntro = 2.35;
-      gameState.checkpoint = { stageIndex: levelIndex, waveIndex: stage.waves, boss: true, bossHp: hp, playerX: player.x, hp: player.hp, kills: enemiesDefeated };
+      gameState.checkpoint = { stageIndex: levelIndex, waveIndex: stage.waves, boss: true, bossHp: hp, bossHealMask: boss.healCollected, playerX: player.x, hp: player.hp, kills: enemiesDefeated };
       saveProgress();
       fightGate = worldWidth - 110;
       toast = `${stage.boss} ВЫХОДИТ НА АРЕНУ`;
@@ -2083,9 +2087,9 @@
     const checkpoint = gameState.checkpoint;
     if (!checkpoint || checkpoint.stageIndex !== levelIndex) return;
     if (levels[levelIndex].finale) {
-      gameState.checkpoint = { ...checkpoint, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, ...(boss?.alive ? { bossHp: Math.max(1, boss.hp) } : {}) };
+      gameState.checkpoint = { ...checkpoint, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, ...(boss?.alive ? { bossHp: Math.max(1, boss.hp), bossHealMask: boss.healCollected || 0 } : {}) };
     } else if (boss?.alive) {
-      gameState.checkpoint = { ...checkpoint, boss: true, bossHp: boss.hp, playerX: player.x, hp: player.hp, kills: enemiesDefeated };
+      gameState.checkpoint = { ...checkpoint, boss: true, bossHp: boss.hp, bossHealMask: boss.healCollected || 0, playerX: player.x, hp: player.hp, kills: enemiesDefeated };
     } else {
       gameState.checkpoint = { ...checkpoint, boss: false, playerX: player.x, hp: player.hp };
     }
@@ -2193,6 +2197,7 @@
   }
 
   function updateBoss(dt) {
+    dropBossHealing();
     if (bossIntro > 0) { bossIntro = Math.max(0, bossIntro - dt); return; }
     const nextPhase = boss.hp <= boss.maxHp * 0.24 ? 3 : boss.hp <= boss.maxHp * 0.55 ? 2 : 1;
     if (nextPhase > boss.phase) {
@@ -2235,56 +2240,116 @@
     boss.state = 'tell';
     boss.attack = 1 + Math.floor(Math.random() * 3);
     if (avoidPrevious && boss.attack === boss.lastAttack) boss.attack = boss.attack % 3 + 1;
+    if (boss.attack === boss.lastAttack) boss.attack = boss.attack % 3 + 1;
     boss.lastAttack = boss.attack;
     boss.timer = delay;
     boss.hitDone = false;
+    boss.aimX = player.x; boss.aimY = player.y;
     toast = `${bossWarning()}${comboStart ? ' · СВЯЗКА' : ''}`;
     toastTime = delay;
-    const dodgeHint = boss.attack === 1 ? 'Уйди с линии замаха, смени глубину арены или перепрыгни выпад.' : boss.attack === 2 ? 'Сместись с отмеченной точки; от наземного удара может спасти прыжок.' : 'Уйди с отмеченных точек по горизонтали или смени линию арены.';
+    const dodgeHint = 'Следи за ингредиентами. Прыгай через низкие снаряды, уходи с линии нити и с места падения.';
     announce(`${bossWarning()}. ${dodgeHint}${comboStart ? ' После него сразу последует второй приём.' : ''}`);
     sound('bossTell');
   }
 
   function bossWarning() {
-    const names = ['КОМБО ФРИТЮРА', 'ГОРЯЧЕЕ МАСЛО', 'МАСЛЯНЫЙ КОРИДОР', 'СЫРНЫЙ ХЛЫСТ', 'РЫВОК ИЗ ПЕЧИ', 'ТРИ КУСКА В ПОЛЁТЕ', 'ТЯЖЁЛЫЙ УДАР', 'ВЗРЫВ КРОШЕК', 'ДРОБИЛКА КРОШЕК', 'РАЗМАХ СПАГЕТТИ', 'ЗАЛП ФРИКАДЕЛЕК', 'ПАСТА НА ВСЮ АРЕНУ', 'ДВОЙНОЙ ЧИЗБУРГЕР', 'ГОРЯЧИЙ ГРИЛЬ', 'СЫРНЫЙ ЗАЛП'];
+    const names = ['КОПЬЯ ИЗ КАРТОШКИ', 'ДОЖДЬ ФРИТЮРА', 'ГОРЯЧЕЕ МАСЛО', 'СЫРНАЯ НИТЬ', 'ПИЦЦА-БУМЕРАНГ', 'ВЕЕР ПЕППЕРОНИ', 'НАГГЕТ-МЕТЕОР', 'ВОЛНА КРОШЕК', 'ХРУСТЯЩАЯ КАРТЕЧЬ', 'ЩУПАЛЬЦЕ ПАСТЫ', 'ЗАЛП ФРИКАДЕЛЕК', 'ЛОВУШКА ИЗ ЛАПШИ', 'КОТЛЕТНЫЙ ОБВАЛ', 'ПЛАМЯ ГРИЛЯ', 'ОГУРЕЧНЫЙ БУМЕРАНГ'];
     const index = (levelIndex * 3) + boss.attack - 1;
     return names[index] || 'БЕРЕГИСЬ';
+  }
+
+  function dropBossHealing() {
+    if (!boss?.alive) return;
+    [.67, .34].forEach((threshold, index) => {
+      const bit = 1 << index;
+      if (boss.hp > boss.maxHp * threshold || (boss.healMask || 0) & bit) return;
+      boss.healMask = (boss.healMask || 0) | bit;
+      const targetX = clamp(player.x - 90 - index * 28, 42, worldWidth - 42);
+      drops.push({ type: 'medkit', bossHealBit: bit, x: boss.x - 30, y: boss.y - 80, fromX: boss.x - 30, fromY: boss.y - 80, targetX, targetY: player.y - 24, emerge: .6, life: 120, amount: Math.ceil(player.maxHp * .35), elite: false });
+      toast = 'БОСС ВЫРОНИЛ ХИЛКУ · +35% HP'; toastTime = 2;
+      burst(boss.x - 30, boss.y - 80, '#a7e6b1', 16); sound('pickup');
+      announce('Босс выронил лечение. Восстанавливает 35 процентов максимального здоровья.');
+    });
+  }
+
+  function bossWeapon(kind, motion, targetX, targetY, damage, options = {}) {
+    const startX = boss.x - 52, startY = boss.y;
+    const h = { bossWeapon: true, type: kind, motion, startX, startY, targetX: clamp(targetX, 42, worldWidth - 42), targetY: clamp(targetY, 382, 477), x: startX, y: startY, height: -42, age: 0, duration: .85, delay: 0, linger: 0, radius: 23, depth: 30, jumpClear: 54, hit: false, damage: Math.round(damage * (levelIndex === 0 ? .85 : 1)), seed: Math.random() * 10, ...options };
+    h.life = h.duration + h.delay + h.linger;
+    hazards.push(h); return h;
   }
 
   function performBossAttack() {
     sound('bossAttack');
     const key = levels[levelIndex].key;
-    const laneMatch = Math.abs(player.y - boss.y) < 34;
-    if (key === 'burger') {
-      if (boss.attack === 1) tryBossHit(165, 52, 20);
-      else {
-        const offsets = boss.attack === 2 ? [0] : [-1, 0, 1];
-        offsets.forEach(offset => hazards.push(makeHazard(clamp(player.x + offset * 105, 42, worldWidth - 42), player.y, 'cheese', 11)));
-      }
-    } else if (key === 'fryKing') {
-      if (boss.attack === 1) tryBossHit(132, 54, 20);
-      else if (boss.attack === 2) [-1, 0, 1].forEach(offset => hazards.push(makeHazard(clamp(player.x + offset * 90, 42, worldWidth - 42), player.y, 'oil', 12)));
-      else [-1, 0, 1].forEach(offset => hazards.push(makeHazard(clamp(player.x + offset * 65, 42, worldWidth - 42), player.y, 'oil', 8)));
+    if (key === 'pizzaSlice' || key === 'spaghettiMonster') sound(boss.attack === 1 ? 'whip' : 'tomatoThrow');
+    if (key === 'nuggetBrute') sound('heavy');
+    if (key === 'fryKing') sound('pepperRush');
+    const x = boss.aimX ?? player.x, y = boss.aimY ?? player.y;
+    const frenzy = boss.phase === 3;
+    if (key === 'fryKing') {
+      if (boss.attack === 1) {
+        [-1, 0, 1].forEach((lane, i) => bossWeapon('fry', 'line', x - 180, y + lane * 27, 13, { duration: .8, delay: i * .11, startY: boss.y + lane * 27, radius: 19 }));
+      } else if (boss.attack === 2) {
+        for (let i = 0; i < (frenzy ? 7 : 5); i++) bossWeapon('fry', 'fall', x + (i - (frenzy ? 3 : 2)) * 62, y + Math.sin(i * 2) * 26, 12, { duration: .64, delay: i * .13, linger: .18 });
+      } else [-1, 0, 1].forEach((offset, i) => bossWeapon('oil', 'arc', x + offset * 90, y, 11, { duration: .85, delay: i * .12, linger: 1.4, radius: 34, jumpClear: 48 }));
     } else if (key === 'pizzaSlice') {
-      if (boss.attack === 1 && laneMatch) tryBossHit(224, 60, 17);
-      else if (boss.attack === 2) hazards.push(makeHazard(clamp(player.x + player.face * 80, 42, worldWidth - 42), player.y, 'cheese', 14));
-      else [-1, 0, 1].forEach(offset => hazards.push(makeHazard(clamp(player.x + offset * 120, 42, worldWidth - 42), player.y, 'cheese', 9)));
+      if (boss.attack === 1) bossWeapon('cheeseThread', 'beam', boss.x - 340, y, 19, { duration: .65, delay: .16, radius: 12, depth: 23, jumpClear: 45 });
+      else if (boss.attack === 2) bossWeapon('pizza', 'boomerang', x - 170, y, 16, { duration: 1.85, radius: 33, jumpClear: 64 });
+      else [-1, 0, 1].forEach((offset, i) => bossWeapon('pizza', 'line', x - 200, y + offset * 54, 12, { duration: 1.12, delay: i * .13, startY: boss.y + offset * 10, radius: 25 }));
     } else if (key === 'nuggetBrute') {
-      if (boss.attack === 1 && Math.abs(player.x - boss.x) < 118 && laneMatch && player.z === 0) tryBossHit(135, 65, 25);
-      else if (boss.attack === 2) hazards.push(makeHazard(player.x, player.y, 'slam', 14));
-      else [-1, 0, 1].forEach(offset => hazards.push(makeHazard(clamp(player.x + offset * 105, 42, worldWidth - 42), player.y, 'slam', 10)));
+      if (boss.attack === 1) {
+        bossWeapon('nugget', 'fall', x, y, 24, { duration: .68, radius: 45, depth: 35, linger: .35, jumpClear: 65 });
+        [-1, 1].forEach(direction => bossWeapon('crack', 'line', x + direction * 260, y, 12, { startX: x, startY: y, duration: .9, delay: .68, height: 0, radius: 30, jumpClear: 35 }));
+      } else if (boss.attack === 2) {
+        [0, .2, .4].forEach(delay => bossWeapon('crack', 'line', boss.x - 540, boss.y, 14, { duration: 1.45, delay, height: 0, radius: 31, depth: 35, jumpClear: 35 }));
+      } else [-2, -1, 0, 1, 2].forEach((offset, i) => bossWeapon('crumb', 'line', x - 190, y + offset * 33, 10, { duration: .9, delay: i * .06, radius: 15, startY: boss.y + offset * 9 }));
     } else if (key === 'spaghettiMonster') {
-      if (boss.attack === 1 && laneMatch && player.z === 0) tryBossHit(280, 75, 20);
-      else if (boss.attack === 2) [-1, 0, 1].forEach(offset => hazards.push(makeHazard(clamp(player.x + offset * 115, 42, worldWidth - 42), player.y, 'pasta', 13)));
-      else [-2, -1, 0, 1, 2].forEach(offset => hazards.push(makeHazard(clamp(player.x + offset * 82, 42, worldWidth - 42), player.y, 'pasta', 7)));
+      if (boss.attack === 1) bossWeapon('tentacle', 'beam', boss.x - 380, y, 18, { duration: .8, depth: 24, jumpClear: 60, slow: .65 });
+      else if (boss.attack === 2) [-1, 0, 1].forEach((offset, i) => bossWeapon('meatball', 'arc', x + offset * 95, y, 15, { duration: 1.05, delay: i * .18, linger: .25, radius: 27 }));
+      else [-1, 0, 1].forEach((offset, i) => bossWeapon('noodleTrap', 'rise', x + offset * 92, y, 12, { duration: .7, delay: i * .16, linger: 1, radius: 24, jumpClear: 95, slow: .85 }));
+    } else if (key === 'burger') {
+      if (boss.attack === 1) [-1, 0, 1].forEach((offset, i) => bossWeapon('patty', 'fall', x + offset * 96, y, 19, { duration: .78, delay: i * .24, radius: 38, linger: .24, jumpClear: 65 }));
+      else if (boss.attack === 2) [0, .3].forEach(delay => bossWeapon('flame', 'line', boss.x - 590, boss.y, 16, { duration: 1.4, delay, radius: 40, depth: 30, jumpClear: 70 }));
+      else [-1, 1].forEach((offset, i) => bossWeapon('pickle', 'boomerang', x - 180, y + offset * 32, 13, { duration: 1.9, delay: i * .28, radius: 25, jumpClear: 60 }));
     }
   }
 
-  function makeHazard(x, y, type, damage) { return { x, y, type, damage: Math.round((damage + levelIndex * 2 + (boss?.phase === 3 ? 3 : 0)) * (levelIndex === 0 ? 0.78 : 1)), life: 1.05, warned: true, hit: false }; }
-
-  function tryBossHit(range, depth, damage) {
-    if (Math.abs(player.x - boss.x) < range && Math.abs(player.y - boss.y) < depth && canBeHit() && player.z > -25) damagePlayer(Math.round((damage + levelIndex * 2 + (boss.phase === 3 ? 3 : 0)) * (levelIndex === 0 ? 0.78 : 1)), boss.x);
+  function updateBossWeapon(h, dt) {
+    h.age += dt; h.life -= dt;
+    const p = clamp((h.age - h.delay) / h.duration, 0, 1);
+    h.progress = p;
+    const flight = h.motion === 'boomerang' ? Math.sin(p * Math.PI) : p;
+    if (h.motion === 'beam') {
+      h.x = h.targetX; h.y = h.targetY; h.height = -48;
+    } else if (h.motion === 'fall' || h.motion === 'rise') {
+      h.x = h.targetX; h.y = h.targetY;
+      h.height = h.motion === 'fall' ? -260 * Math.pow(1 - p, 1.7) : -Math.sin(p * Math.PI / 2) * 48;
+    } else {
+      h.x = h.startX + (h.targetX - h.startX) * flight;
+      h.y = h.startY + (h.targetY - h.startY) * flight;
+      h.height = h.motion === 'arc' ? -Math.sin(p * Math.PI) * 155 : h.type === 'crack' ? 0 : -42;
+    }
+    const before = h.age < h.delay;
+    const landed = p >= 1 && h.motion !== 'beam';
+    if (landed && !h.impact) {
+      h.impact = true;
+      if (h.motion === 'fall' || h.motion === 'arc') {
+        burst(h.x, h.y - 8, h.type === 'oil' ? '#ffad45' : '#e7a55b', h.type === 'nugget' ? 22 : 9);
+        if (h.type === 'nugget' || h.type === 'patty') { shake = Math.max(shake, 6); sound('heavy'); }
+      }
+    }
+    const requiresLanding = h.type === 'oil' || h.type === 'meatball' || h.type === 'nugget' || h.type === 'patty';
+    const active = !before && (requiresLanding ? landed : h.type === 'noodleTrap' ? p > .55 : h.height > -85);
+    const beamEnd = h.startX + (h.targetX - h.startX) * clamp(p / .2, 0, 1);
+    const inX = h.motion === 'beam' ? player.x >= Math.min(h.startX, beamEnd) - 12 && player.x <= Math.max(h.startX, beamEnd) + 12 : Math.abs(player.x - h.x) < h.radius;
+    const hitLane = h.motion === 'beam' ? h.startY + (h.targetY - h.startY) * clamp((player.x - h.startX) / (beamEnd - h.startX || 1), 0, 1) : h.y;
+    if (!h.hit && active && inX && Math.abs(player.y - hitLane) < h.depth && player.z > -h.jumpClear && canBeHit()) {
+      h.hit = true; const hpBefore = player.hp; damagePlayer(h.damage, h.x);
+      if (h.slow && player.hp < hpBefore) { player.slowTime = h.slow; toast = 'ПАСТА ПРИЛИПЛА · ВЫРЫВАЙСЯ'; toastTime = .8; }
+    }
   }
+
 
   function canBeHit() { return player.invuln <= 0 || player.dodgeReady; }
 
@@ -2329,6 +2394,7 @@
 
   function updateHazards(dt) {
     for (const hazard of hazards) {
+      if (hazard.bossWeapon) { updateBossWeapon(hazard, dt); continue; }
       if (hazard.type === 'tomato' && !hazard.landed) {
         hazard.elapsed += dt;
         const progress = Math.min(1, hazard.elapsed / hazard.flight);
@@ -2363,6 +2429,13 @@
   function updateDrops(dt) {
     for (const drop of drops) {
       drop.life -= dt;
+      if (drop.emerge > 0) {
+        drop.emerge = Math.max(0, drop.emerge - dt);
+        const t = 1 - drop.emerge / .6;
+        drop.x = drop.fromX + (drop.targetX - drop.fromX) * t;
+        drop.y = drop.fromY + (drop.targetY - drop.fromY) * t - Math.sin(t * Math.PI) * 75;
+        continue;
+      }
       const pullX = player.x - drop.x;
       const pullY = player.y - 24 - drop.y;
       const distance = Math.hypot(pullX, pullY);
@@ -2379,6 +2452,10 @@
         player.hp += restored;
         if (restored > 0) spawnDamageNumber(player.x, player.y - 124, restored, false, false, false, true, true);
         drop.life = 0;
+        if (drop.bossHealBit && boss?.alive) {
+          boss.healCollected = (boss.healCollected || 0) | drop.bossHealBit;
+          saveReturnCheckpoint();
+        }
         burst(drop.x, drop.y, drop.elite ? '#ffd17b' : '#ff5348', drop.elite ? 14 : 9);
         const medkit = drop.type === 'medkit';
         toast = restored > 0 ? `${medkit ? 'ХИЛКА' : 'СОУС'} +${restored}${player.hp >= player.maxHp ? ' · HP ПОЛНО' : ''}` : 'ЗДОРОВЬЕ ПОЛНО';
@@ -2424,11 +2501,11 @@
     if (!bossSpawned && player.x > 3250) {
       const saved = gameState.checkpoint;
       const hp = Math.min(1600, saved?.bossHp ?? 1600);
-      boss = { x: 3760, y: 425, hp, hpTrail: hp, maxHp: 1600, alive: true, state: 'idle', timer: 1.25, stun: 0, phase: hp / 1600 > .55 ? 1 : hp / 1600 > .24 ? 2 : 3, phaseFlash: 0, attack: 1, lastAttack: 0, chainRemaining: 0, hitDone: false };
+      boss = { healMask: saved?.bossHealMask || 0, healCollected: saved?.bossHealMask || 0, x: 3760, y: 425, hp, hpTrail: hp, maxHp: 1600, alive: true, state: 'idle', timer: 1.25, stun: 0, phase: hp / 1600 > .55 ? 1 : hp / 1600 > .24 ? 2 : 3, phaseFlash: 0, attack: 1, lastAttack: 0, chainRemaining: 0, hitDone: false };
       bossSpawned = true; bossIntro = 2.35;
       toast = 'BURGER TOO HUNGRY · ПОСЛЕДНИЙ БОСС'; toastTime = 2.35;
       announce(toast); sound('bossAttack');
-      gameState.checkpoint = { stageIndex: levelIndex, finale: true, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, kills: 0, bossHp: hp };
+      gameState.checkpoint = { stageIndex: levelIndex, finale: true, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, kills: 0, bossHp: hp, bossHealMask: boss.healCollected };
       saveProgress();
     }
   }
@@ -2490,7 +2567,7 @@
     sound('playerDown');
     const canResume = gameState.checkpoint?.stageIndex === levelIndex;
     if (canResume && boss?.alive) {
-      gameState.checkpoint = { ...gameState.checkpoint, ...(levels[levelIndex].finale ? {} : { boss: true }), bossHp: Math.max(1, boss.hp), playerX: player.x };
+      gameState.checkpoint = { ...gameState.checkpoint, ...(levels[levelIndex].finale ? {} : { boss: true }), bossHp: Math.max(1, boss.hp), bossHealMask: boss.healCollected || 0, playerX: player.x };
       saveProgress();
     }
     showOverlay('КАПЛЯ РАСТЕКЛАСЬ', canResume ? 'Выбери, как продолжить: вернуться к последней контрольной точке или начать забег с первой кухни. Новый забег сбросит осколки и способности.' : 'Выбери, как продолжить: повторить этот этап или начать забег с первой кухни. Новый забег сбросит осколки и способности.', canResume ? 'С КОНТРОЛЬНОЙ ТОЧКИ' : 'ПОВТОРИТЬ ЭТАП', () => startLevel(levelIndex, canResume));
@@ -3041,9 +3118,111 @@
     ctx.restore();
   }
 
+  function drawBossIngredient(kind, size = 1, phase = 0) {
+    ctx.save(); ctx.scale(size, size); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const warm = ctx.createLinearGradient(-20, -24, 15, 22);
+    warm.addColorStop(0, '#fff0af'); warm.addColorStop(.38, '#f4b449'); warm.addColorStop(1, '#a84624');
+    ctx.strokeStyle = '#5c291b'; ctx.lineWidth = 2.5;
+    if (kind === 'fry') {
+      ctx.rotate(.18); ctx.fillStyle = warm;
+      ctx.beginPath(); ctx.moveTo(-7,-28); ctx.lineTo(6,-26); ctx.lineTo(8,25); ctx.lineTo(-6,28); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#ffe9a6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-2,-21); ctx.lineTo(-1,19); ctx.stroke();
+      ctx.fillStyle='#804321'; for(let i=0;i<4;i++)ctx.fillRect(-4+i%2*7,-17+i*11,2,3);
+      ctx.fillStyle='#fff3cc'; ctx.fillRect(2,-12,2,2); ctx.fillRect(-2,9,2,2);
+    } else if (kind === 'pizza') {
+      ctx.fillStyle = '#f7c45e'; ctx.beginPath(); ctx.moveTo(-24,-21); ctx.quadraticCurveTo(0,-35,25,-19); ctx.lineTo(1,28); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle='#bb642c';ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(-20,-21);ctx.quadraticCurveTo(0,-31,21,-20);ctx.stroke();
+      ctx.strokeStyle='#ffe1a0';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-18,-24);ctx.quadraticCurveTo(0,-31,18,-23);ctx.stroke();
+      for(const [x,y,r]of[[-9,-9,6],[10,-7,5],[1,9,5]]){ctx.fillStyle='#af312b';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.fillStyle='#f98046';ctx.fillRect(x-2,y-2,2,2)}
+      ctx.fillStyle='#698a3c';ctx.fillRect(-6,2,3,5);ctx.fillRect(6,-16,3,4);
+      ctx.strokeStyle='#fff0b3';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(4,17);ctx.lineTo(1,27);ctx.stroke();
+    } else if (kind === 'nugget' || kind === 'crumb') {
+      ctx.fillStyle=warm;ctx.beginPath();ctx.moveTo(-22,-14);ctx.lineTo(-8,-26);ctx.lineTo(15,-23);ctx.lineTo(27,-7);ctx.lineTo(22,14);ctx.lineTo(5,24);ctx.lineTo(-19,18);ctx.closePath();ctx.fill();ctx.stroke();
+      for(let i=0;i<14;i++){const x=Math.sin(i*4.3)*19,y=Math.cos(i*2.7)*16;ctx.fillStyle=i%2?'#ffe29a':'#b86828';ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+4,y-2);ctx.lineTo(x+3,y+3);ctx.closePath();ctx.fill()}
+      ctx.strokeStyle='#fff0bf';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-15,-13);ctx.quadraticCurveTo(-6,-21,8,-17);ctx.stroke();
+    } else if (kind === 'meatball' || kind === 'patty') {
+      const meat=ctx.createRadialGradient(-8,-9,2,0,0,28);meat.addColorStop(0,'#d27a42');meat.addColorStop(.55,'#8e3b27');meat.addColorStop(1,'#3d1a18');ctx.fillStyle=meat;
+      ctx.beginPath();ctx.moveTo(-25,0);ctx.bezierCurveTo(-27,-25,20,-32,26,-5);ctx.bezierCurveTo(33,24,-22,31,-25,0);ctx.fill();ctx.stroke();
+      for(let i=0;i<15;i++){const x=Math.sin(i*3.7)*20,y=Math.cos(i*2.4)*16;ctx.fillStyle=i%3?'#4f211c':'#e89c57';ctx.fillRect(x,y,3,2)}
+      ctx.strokeStyle='#f5b67b';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-16,-13);ctx.quadraticCurveTo(-10,-22,0,-17);ctx.stroke();
+      ctx.fillStyle='#7d9a49';ctx.fillRect(-7,-5,4,3);ctx.fillRect(11,7,3,4);
+      if(kind==='patty'){ctx.strokeStyle='#2d1516';ctx.lineWidth=4;for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(-17,i*9-4);ctx.lineTo(16,i*9+3);ctx.stroke()}}
+    } else if (kind === 'pickle') {
+      const green=ctx.createLinearGradient(-20,-8,20,10);green.addColorStop(0,'#c7dc6c');green.addColorStop(.5,'#86ae42');green.addColorStop(1,'#345c30');ctx.fillStyle=green;ctx.strokeStyle='#31502b';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(-25,-4);ctx.bezierCurveTo(-22,-22,21,-24,27,-3);ctx.bezierCurveTo(32,20,-20,23,-25,-4);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#dceba0';ctx.lineWidth=1.5;for(let i=0;i<7;i++){const angle=i*Math.PI*2/7;ctx.beginPath();ctx.moveTo(Math.cos(angle)*5,Math.sin(angle)*4);ctx.lineTo(Math.cos(angle)*18,Math.sin(angle)*11);ctx.stroke()}
+      ctx.fillStyle='#edf1b4';for(let i=0;i<5;i++){ctx.beginPath();ctx.ellipse(Math.sin(i*2.4)*12,Math.cos(i*2.4)*7,2,3,i,0,Math.PI*2);ctx.fill()}
+    } else if (kind === 'oil') {
+      ctx.fillStyle='#ffc755';ctx.beginPath();ctx.moveTo(0,-27);ctx.bezierCurveTo(6,-13,21,5,10,16);ctx.bezierCurveTo(-1,29,-23,9,-11,-5);ctx.closePath();ctx.fill();ctx.strokeStyle='#ffe9b3';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-5,-5);ctx.quadraticCurveTo(-12,8,-3,12);ctx.stroke();
+    } else if (kind === 'tentacle' || kind === 'noodleTrap' || kind === 'cheeseThread') {
+      const pasta = kind !== 'cheeseThread';
+      for(let strand=0;strand<(pasta?4:2);strand++) {
+        ctx.strokeStyle=strand%2?'#ffe3a0':'#bd8441';ctx.lineWidth=pasta?5:7;ctx.beginPath();ctx.moveTo(-20+strand*7,22);ctx.bezierCurveTo(-30+strand*7,-9,20+strand*3,-2,8+strand*5,-23);ctx.stroke();
+      }
+    } else if (kind === 'flame') {
+      ctx.fillStyle='#dc3f23';ctx.beginPath();ctx.moveTo(-28,12);ctx.quadraticCurveTo(-42,-5,-24,-24);ctx.lineTo(-20,-2);ctx.quadraticCurveTo(-4,-45,3,-47);ctx.quadraticCurveTo(3,-20,19,-14);ctx.lineTo(20,-31);ctx.quadraticCurveTo(44,-3,25,17);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#ffa53c';ctx.beginPath();ctx.moveTo(-17,12);ctx.quadraticCurveTo(-24,-5,-10,-12);ctx.lineTo(-7,0);ctx.lineTo(3,-27);ctx.quadraticCurveTo(9,-6,19,3);ctx.lineTo(15,17);ctx.closePath();ctx.fill();ctx.fillStyle='#fff0aa';ctx.beginPath();ctx.moveTo(-6,14);ctx.quadraticCurveTo(-8,2,1,-8);ctx.quadraticCurveTo(11,7,8,16);ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawBossWeapon(h) {
+    const p=h.progress||0, age=Math.max(0,h.age-h.delay), active=h.age>=h.delay;
+    const remaining=clamp(h.life/.22,0,1);
+    ctx.save();ctx.globalAlpha=remaining;
+    if(h.motion==='beam') {
+      if(!active){ctx.restore();return}
+      const reach=clamp(p/.2,0,1), end=h.startX+(h.targetX-h.startX)*reach;
+      const tension=Math.sin(p*Math.PI); const pasta=h.type==='tentacle';
+      for(let strand=0;strand<(pasta?4:2);strand++){
+        ctx.strokeStyle=pasta?(strand%2?'#f7d78b':'#bf7d40'):(strand?'#fff1a7':'#df9d37');ctx.lineWidth=pasta?5-strand*.5:strand?3:9;ctx.lineCap='round';
+        ctx.shadowColor=pasta?'#ffab60':'#ffcc60';ctx.shadowBlur=6;
+        ctx.beginPath();ctx.moveTo(h.startX,h.startY-58+strand*4);
+        ctx.bezierCurveTo(h.startX-70,h.startY-75+Math.sin(age*13+strand)*12,end+70,h.y-40+Math.sin(age*10+strand)*14,end,h.y-47+strand*3);ctx.stroke();
+      }
+      ctx.shadowBlur=0;ctx.fillStyle=pasta?'#da4b36':'#ffe6a0';
+      for(let i=0;i<4;i++){const x=end+(h.startX-end)*i/4;ctx.beginPath();ctx.moveTo(x,h.y-40);ctx.quadraticCurveTo(x-4,h.y-20+Math.sin(age*9+i)*7,x+3,h.y-29);ctx.lineTo(x+5,h.y-42);ctx.fill()}
+      ctx.restore();return;
+    }
+    // Falling ingredients cast a soft food-shaped preview, never a targeting ring.
+    if(h.motion==='fall' && p<.8){ctx.save();ctx.translate(h.targetX,h.targetY+2);ctx.scale(1,.28);ctx.globalAlpha=remaining*.16;drawBossIngredient(h.type,h.type==='nugget'?1.6:1,0);ctx.restore()}
+    if(!active){ctx.restore();return}
+    if(h.type==='crack') {
+      ctx.translate(h.x,h.y);ctx.lineCap='round';
+      for(let line=0;line<3;line++){ctx.strokeStyle=line===0?'#2c171b':line===1?'#f09d59':'#ffdaa0';ctx.lineWidth=line===0?7:line===1?3:1;ctx.beginPath();ctx.moveTo(-34,-2);ctx.lineTo(-22,-11);ctx.lineTo(-10,1);ctx.lineTo(1,-9);ctx.lineTo(12,4);ctx.lineTo(23,-7);ctx.lineTo(34,0);ctx.stroke()}
+      for(let i=0;i<5;i++){ctx.save();ctx.translate((i-2)*17,-10-Math.abs(Math.sin(age*12+i))*25);ctx.rotate(i+age*4);drawBossIngredient('crumb',.12);ctx.restore()}
+      ctx.restore();return;
+    }
+    if(h.type==='noodleTrap') {
+      ctx.translate(h.x,h.y);const grow=clamp(p*1.6,0,1);
+      for(let i=0;i<5;i++){const x=(i-2)*10;ctx.strokeStyle=i%2?'#f7d482':'#ac7543';ctx.lineWidth=5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x,5);ctx.bezierCurveTo(x-14,-15*grow,x+20,-43*grow,x+Math.sin(age*8+i)*10,-78*grow);ctx.stroke();ctx.strokeStyle='#fff0ba';ctx.lineWidth=1.2;ctx.stroke()}
+      ctx.restore();return;
+    }
+    if(h.type==='oil' && p>=1) {
+      ctx.translate(h.x,h.y);const simmer=1+Math.sin(age*12)*.04;ctx.scale(simmer,1);
+      const oil=ctx.createLinearGradient(0,-12,0,15);oil.addColorStop(0,'#e88a25');oil.addColorStop(.5,'#a63e1c');oil.addColorStop(1,'#44201d');ctx.fillStyle=oil;ctx.beginPath();ctx.moveTo(-39,1);ctx.bezierCurveTo(-34,-17,-15,-8,-5,-13);ctx.bezierCurveTo(8,-17,13,-6,31,-8);ctx.bezierCurveTo(50,2,32,14,17,9);ctx.bezierCurveTo(5,20,-7,9,-22,13);ctx.bezierCurveTo(-44,13,-50,7,-39,1);ctx.fill();
+      ctx.strokeStyle='#ffd889';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-22,-3);ctx.quadraticCurveTo(-13,-9,-3,-5);ctx.stroke();
+      for(let i=0;i<4;i++){const t=(age*2+i*.3)%1;ctx.globalAlpha=remaining*(1-t)*.7;ctx.fillStyle='#ffbd54';ctx.beginPath();ctx.moveTo(-22+i*14,-5-t*20);ctx.lineTo(-25+i*14,-9-t*20);ctx.lineTo(-20+i*14,-12-t*20);ctx.lineTo(-18+i*14,-7-t*20);ctx.fill()}
+      ctx.restore();return;
+    }
+    const rotation=prefersReducedMotion?0:h.motion==='boomerang'?age*13:h.type==='fry'?-.8:h.type==='flame'?Math.sin(age*22)*.09:age*4;
+    const scale=h.type==='nugget'?1.65:h.type==='crumb'?.35:h.type==='patty'?1.45:h.type==='pizza'?.95:1;
+    if(h.motion!=='fall' && !prefersReducedMotion){for(let i=3;i>=1;i--){ctx.save();ctx.globalAlpha=remaining*.09*(4-i);ctx.translate(h.x+(h.startX-h.targetX)*.025*i,h.y+h.height+2*i);ctx.rotate(rotation-i*.3);drawBossIngredient(h.type,scale*(1-i*.06));ctx.restore()}}
+    ctx.translate(h.x,h.y+h.height);ctx.rotate(rotation);ctx.shadowColor=h.type==='pickle'?'#aecb58':h.type==='flame'?'#ff6727':'#ffbc63';ctx.shadowBlur=h.type==='flame'?18:5;drawBossIngredient(h.type,scale);ctx.restore();
+  }
+
+  function drawBossWindup() {
+    if(!boss?.alive || boss.state!=='tell')return;
+    const kinds={fryKing:['fry','fry','oil'],pizzaSlice:['cheeseThread','pizza','pizza'],nuggetBrute:['nugget','crumb','crumb'],spaghettiMonster:['tentacle','meatball','noodleTrap'],burger:['patty','flame','pickle']};
+    const kind=kinds[levels[levelIndex].key]?.[boss.attack-1];if(!kind)return;
+    const bob=prefersReducedMotion?0:Math.sin(time*9)*4;
+    ctx.save();ctx.translate(boss.x-72,boss.y-105+bob);ctx.rotate(prefersReducedMotion?0:Math.sin(time*5)*.15);ctx.globalAlpha=.9;drawBossIngredient(kind,.72);ctx.restore();
+  }
+
+
   function drawBoss() {
     const stage = levels[levelIndex];
-    if (stage.key === 'burger') { drawBurgerBoss(); return; }
+    if (stage.key === 'burger') { drawBurgerBoss(); drawBossWindup(); return; }
     const [idle, attack] = art.bosses[stage.key];
     const animated = boss.state === 'attack';
     const sprite = animated ? attack : idle;
@@ -3051,7 +3230,8 @@
     const idlePulse = prefersReducedMotion ? 0 : Math.sin(time * 2.6 + levelIndex * 0.7);
     const bob = boss.state === 'idle' ? idlePulse * 3 : 0;
     const x = boss.x;
-    const y = boss.y + bob;
+    const leap = stage.key === 'nuggetBrute' && animated && boss.attack === 1 && !prefersReducedMotion ? Math.sin(Math.PI * clamp(1 - boss.timer / (boss.attackDuration || .52), 0, 1)) * 65 : 0;
+    const y = boss.y + bob - leap;
     const defeatProgress = boss.state === 'defeated' ? clamp((cutscene?.time || 0) / 0.88, 0, 1) : 0;
     const attackProgress = animated ? clamp(1 - boss.timer / (boss.attackDuration || 0.52), 0, 1) : 0;
     const attackPulse = Math.sin(attackProgress * Math.PI);
@@ -3077,62 +3257,21 @@
       ctx.restore();
     }
     ctx.globalAlpha = 1;
+    drawBossWindup();
   }
 
   function drawHazard(hazard) {
-    const pulse = prefersReducedMotion ? 0.6 : 0.48 + Math.sin(time * 20) * 0.22;
+    if (hazard.bossWeapon) { drawBossWeapon(hazard); return; }
     ctx.save();
     if (hazard.type === 'tomato' && !hazard.landed) {
-      ctx.shadowColor = '#ff7956'; ctx.shadowBlur = 12;
-      ctx.fillStyle = '#e64035'; ctx.beginPath(); ctx.arc(hazard.x, hazard.y, 12, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0; ctx.fillStyle = '#6f9b43';
-      ctx.beginPath(); ctx.moveTo(hazard.x, hazard.y - 10); ctx.lineTo(hazard.x - 8, hazard.y - 17); ctx.lineTo(hazard.x - 2, hazard.y - 15); ctx.lineTo(hazard.x + 4, hazard.y - 18); ctx.lineTo(hazard.x + 5, hazard.y - 11); ctx.closePath(); ctx.fill();
-      ctx.restore();
-      return;
-    }
-    ctx.globalAlpha = hazard.life > 0.62 ? pulse : 0.82;
-    if (hazard.type === 'slam') {
-      ctx.fillStyle = '#ffad52';
-      ctx.beginPath(); ctx.ellipse(hazard.x, hazard.y, 51, 23, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#fff0bd'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.globalAlpha *= 0.8;
-      ctx.beginPath(); ctx.ellipse(hazard.x, hazard.y, 35, 12, 0, 0, Math.PI * 2); ctx.stroke();
-    } else if (hazard.type === 'oil') {
-      ctx.shadowColor = '#ffae36'; ctx.shadowBlur = 13;
-      ctx.fillStyle = '#d97824';
-      ctx.beginPath(); ctx.ellipse(hazard.x, hazard.y, 36, 15, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#ffe0a0'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.strokeStyle = '#ffb248'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.ellipse(hazard.x, hazard.y, 23, 8, -0.12, Math.PI * 1.05, Math.PI * 1.9); ctx.stroke();
-      for (const offset of [-12, 8, 19]) {
-        ctx.fillStyle = '#ffcc72'; ctx.beginPath(); ctx.arc(hazard.x + offset, hazard.y - 3, 1.7, 0, Math.PI * 2); ctx.fill();
-      }
-    } else if (hazard.type === 'cheese') {
-      ctx.shadowColor = '#ffd86d'; ctx.shadowBlur = 11;
-      ctx.fillStyle = '#dfaa39'; ctx.strokeStyle = '#fff0a8'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(hazard.x - 27, hazard.y + 12); ctx.lineTo(hazard.x + 1, hazard.y - 17); ctx.lineTo(hazard.x + 25, hazard.y + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#fff0a8';
-      for (const [x, y, radius] of [[-9, 3, 2.8], [8, -3, 2.2], [14, 7, 1.8]]) {
-        ctx.beginPath(); ctx.arc(hazard.x + x, hazard.y + y, radius, 0, Math.PI * 2); ctx.fill();
-      }
-    } else if (hazard.type === 'pasta') {
-      ctx.shadowColor = '#ff644e'; ctx.shadowBlur = 9;
-      ctx.lineCap = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = '#e84f43';
-      for (let line = 0; line < 3; line++) {
-        const y = hazard.y - 8 + line * 8;
-        ctx.beginPath(); ctx.moveTo(hazard.x - 30, y);
-        ctx.bezierCurveTo(hazard.x - 19, y - 11, hazard.x - 8, y + 11, hazard.x + 2, y);
-        ctx.bezierCurveTo(hazard.x + 12, y - 11, hazard.x + 21, y + 9, hazard.x + 30, y - 1);
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0; ctx.lineWidth = 1.5; ctx.strokeStyle = '#ffc185';
-      ctx.beginPath(); ctx.moveTo(hazard.x - 27, hazard.y - 8); ctx.lineTo(hazard.x - 12, hazard.y - 8); ctx.stroke();
+      const skin = ctx.createRadialGradient(hazard.x - 4, hazard.y - 5, 1, hazard.x, hazard.y, 14);
+      skin.addColorStop(0, '#ffbd83'); skin.addColorStop(.3, '#f35a3b'); skin.addColorStop(1, '#7e2221');
+      ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hazard.x, hazard.y, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#789e43'; ctx.beginPath(); ctx.moveTo(hazard.x, hazard.y - 10); ctx.lineTo(hazard.x - 8, hazard.y - 17); ctx.lineTo(hazard.x - 2, hazard.y - 15); ctx.lineTo(hazard.x + 4, hazard.y - 18); ctx.lineTo(hazard.x + 5, hazard.y - 11); ctx.closePath(); ctx.fill();
     } else {
-      ctx.fillStyle = '#ff3e35';
-      ctx.beginPath(); ctx.ellipse(hazard.x, hazard.y, 34, 15, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#ffbd83'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.translate(hazard.x, hazard.y); ctx.globalAlpha = clamp(hazard.life * 2, 0, .85);
+      ctx.fillStyle = '#c33d2d'; ctx.beginPath(); ctx.moveTo(-29,0); ctx.bezierCurveTo(-30,-12,-12,-6,-3,-10); ctx.bezierCurveTo(11,-13,17,-2,27,-4); ctx.bezierCurveTo(40,8,16,15,5,10); ctx.bezierCurveTo(-11,18,-39,9,-29,0); ctx.fill();
+      ctx.strokeStyle = '#ffae79'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-16,-3); ctx.quadraticCurveTo(-7,-8,0,-4); ctx.stroke();
     }
     ctx.restore();
   }
@@ -3436,7 +3575,8 @@
       text('KITCHEN BOSS', 480, 126, 8, '#ffc887', 'center', 900);
       text(levels[levelIndex].boss, 480, 149, 17, '#fff0df', 'center', 950);
       text(levels[levelIndex].bossLine || 'ЭТА КУХНЯ ЕЩЁ НЕ СКАЗАЛА ПОСЛЕДНЕЕ СЛОВО.', 480, 164, 7, '#e7ad8e', 'center', 800);
-      text('КРАСНАЯ: СМЕНИ ЛИНИЮ · ЗЕЛЁНАЯ: ПРЫЖОК', 480, 184, 7, '#ffe0b2', 'center', 850);
+      const tips = ['ПРЫГАЙ ЧЕРЕЗ ФРИ · НЕ СТОЙ В МАСЛЕ', 'БУМЕРАНГ ВЕРНЁТСЯ · ПРЫГАЙ ЧЕРЕЗ СЫР', 'УХОДИ ОТ МЕТЕОРА · ПЕРЕПРЫГНИ ТРЕЩИНЫ', 'ПАСТА ЗАМЕДЛЯЕТ · УХОДИ ОТ ЩУПАЛЕЦ', 'НЕ СТОЙ ПОД КОТЛЕТОЙ · ПРЫГАЙ ЧЕРЕЗ ПЛАМЯ'];
+      text(tips[levelIndex], 480, 184, 7, '#ffe0b2', 'center', 850);
       ctx.globalAlpha = 1;
       return;
     }
