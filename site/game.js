@@ -164,6 +164,7 @@
   ];
 
   const art = {
+    platedSteak: loadArt('assets/food/plated-ribeye.png'),
     hero: loadArt('assets/characters-web/sauce-drop.png'),
     heroRun: loadArt('assets/characters-web/sauce-drop-run.png'),
     heroRunAlt: deferArt('assets/characters-web/sauce-drop-run-alt.png'),
@@ -1185,6 +1186,17 @@
       ctx.globalAlpha = splash;
       ctx.fillStyle = '#ed372f'; ctx.beginPath(); ctx.ellipse(300, 445, 34 + (1-splash)*36, 8 + (1-splash)*5, 0, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
+      if (!prefersReducedMotion && seconds < 8.95) {
+        const age = seconds - 8.2;
+        for (let i = 0; i < 9; i++) {
+          const direction = (i - 4) / 4;
+          const px = 300 + direction * age * (76 + (i % 3) * 24);
+          const py = 441 - age * (80 + (i % 4) * 24) + age * age * 240;
+          ctx.globalAlpha = clamp(1 - age / .75, 0, 1);
+          drawSauceDrop(px, Math.min(446, py), 2.4 + (i % 3));
+        }
+        ctx.globalAlpha = 1;
+      }
       if (seconds > 9.2) {
         const run = prefersReducedMotion ? 0 : Math.min(1, (seconds - 9.2) / 4.1);
         const heroX = prefersReducedMotion ? 430 : 294 + run * 410;
@@ -1226,10 +1238,17 @@
     drawCutscenePlate();
     const landingAt = 4.82;
     const flight = prefersReducedMotion ? 1 : clamp((seconds - 1.65) / (landingAt - 1.65), 0, 1);
-    const easedFlight = 1 - Math.pow(1 - flight, 3);
+    const easedFlight = Math.pow(flight, 1.8);
     const bounceTime = prefersReducedMotion ? 0 : Math.max(0, seconds - landingAt);
-    const dropY = prefersReducedMotion ? 393 : -20 + easedFlight * 420 - Math.abs(Math.sin(bounceTime * 11)) * 23 * Math.exp(-bounceTime * 7);
-    if (seconds > 1.2 && seconds < 6) drawSauceDrop(482, dropY, 19);
+    const dropY = prefersReducedMotion ? 354 : -20 + easedFlight * 374 - Math.abs(Math.sin(bounceTime * 11)) * 23 * Math.exp(-bounceTime * 7);
+    if (seconds > 1.2 && seconds < landingAt) drawSauceDrop(482, dropY, 15);
+    if (seconds >= landingAt) {
+      const spread = prefersReducedMotion ? 1 : 1 - Math.exp(-bounceTime * 9);
+      ctx.save(); ctx.translate(482, 354); ctx.scale(.5 + spread * .5, .45 + spread * .55);
+      const sauce = ctx.createLinearGradient(0, -8, 0, 13); sauce.addColorStop(0, '#ff6350'); sauce.addColorStop(.4, '#c92d22'); sauce.addColorStop(1, '#7e1819');
+      ctx.fillStyle = sauce; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.bezierCurveTo(-20,-10,-4,-5,3,-9); ctx.bezierCurveTo(16,-13,38,-4,30,4); ctx.bezierCurveTo(22,11,5,4,-5,9); ctx.bezierCurveTo(-16,13,-35,6,-26,0); ctx.fill();
+      ctx.strokeStyle='#ffb18a'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(-17,-3); ctx.quadraticCurveTo(-7,-6,1,-4); ctx.stroke(); ctx.restore();
+    }
     if (seconds >= landingAt) {
       const impact = prefersReducedMotion ? 0.42 : Math.max(0, 1 - bounceTime * 2.4);
       if (!prefersReducedMotion) {
@@ -1245,8 +1264,8 @@
           ctx.strokeStyle = i % 2 ? '#ff8060' : '#ffe0a0';
           ctx.lineWidth = i % 3 === 0 ? 2.5 : 1.5;
           ctx.beginPath();
-          ctx.moveTo(482 + Math.cos(angle) * 28, 393 + Math.sin(angle) * 14);
-          ctx.lineTo(482 + Math.cos(angle) * (28 + length), 393 + Math.sin(angle) * (14 + length * 0.55));
+          ctx.moveTo(482 + Math.cos(angle) * 28, 354 + Math.sin(angle) * 14);
+          ctx.lineTo(482 + Math.cos(angle) * (28 + length), 354 + Math.sin(angle) * (14 + length * 0.55));
           ctx.stroke();
         }
         ctx.globalAlpha = 1;
@@ -1254,13 +1273,13 @@
       ctx.strokeStyle = `rgba(255,214,140,${impact * 0.8})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.ellipse(482, 399, prefersReducedMotion ? 58 : 32 + (1 - impact) * 63, prefersReducedMotion ? 11 : 7 + (1 - impact) * 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(482, 360, prefersReducedMotion ? 58 : 32 + (1 - impact) * 63, prefersReducedMotion ? 11 : 7 + (1 - impact) * 12, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
     if (seconds >= 5) {
       const glow = prefersReducedMotion ? 0.42 : Math.min(1, (seconds - 5) * 0.5);
       ctx.globalAlpha = prefersReducedMotion ? glow : glow * (0.62 + Math.sin(seconds * 8) * 0.18);
-      ctx.fillStyle = '#ffcf78'; ctx.beginPath(); ctx.ellipse(482, 388, 100, 42, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.fillStyle = '#ffcf78'; ctx.beginPath(); ctx.ellipse(482, 350, 100, 42, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
       text('БЛЮДО ГОТОВО', 480, 120, 24, '#ffdfa7', 'center', 950);
     }
     if (seconds >= 5.4) {
@@ -1502,52 +1521,22 @@
 
   function drawCutscenePlate() {
     ctx.save();
-    // A real plated ribeye silhouette with a porcelain rim and warm restaurant light.
-    ctx.fillStyle = 'rgba(0,0,0,.48)';
-    ctx.beginPath(); ctx.ellipse(468, 454, 168, 20, 0, 0, Math.PI * 2); ctx.fill();
-    const plate = ctx.createLinearGradient(0, 382, 0, 460);
-    plate.addColorStop(0, '#fff9ed'); plate.addColorStop(.48, '#f3e5d3'); plate.addColorStop(1, '#c9b5a0');
-    ctx.fillStyle = plate; ctx.beginPath(); ctx.ellipse(468, 421, 151, 40, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#fffdf5'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.ellipse(468, 418, 135, 31, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = 'rgba(155,92,57,.58)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(468, 418, 126, 24, 0, 0, Math.PI * 2); ctx.stroke();
-
-    // Roasted tomatoes, charred shallot, and rosemary sit beside the steak.
-    ctx.save(); ctx.translate(548, 415); ctx.rotate(-.25);
-    for (const [x, y, r] of [[0, 0, 8], [12, 6, 7], [-12, 7, 6]]) {
-      const tomato = ctx.createRadialGradient(x - 2, y - 3, 1, x, y, r + 2);
-      tomato.addColorStop(0, '#ff9a62'); tomato.addColorStop(.55, '#cf4938'); tomato.addColorStop(1, '#70251f');
-      ctx.fillStyle = tomato; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,210,154,.65)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x-r*.45,y); ctx.lineTo(x+r*.45,y); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,.5)';
+    ctx.beginPath(); ctx.ellipse(468, 455, 166, 16, 0, 0, Math.PI * 2); ctx.fill();
+    if (art.platedSteak.complete && art.platedSteak.naturalWidth) {
+      const width = 356, height = width * art.platedSteak.naturalHeight / art.platedSteak.naturalWidth;
+      ctx.drawImage(art.platedSteak, 290, 463 - height, width, height);
     }
-    ctx.strokeStyle = '#60754a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-17, -9); ctx.quadraticCurveTo(1, -24, 25, -14); ctx.stroke();
-    for (let i=0;i<5;i++) { const rx=-11+i*8, ry=-15+Math.sin(i*1.7)*4; ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-4,ry-4); ctx.moveTo(rx,ry); ctx.lineTo(rx+4,ry-3); ctx.stroke(); }
-    ctx.restore();
-
-    // Thick ribeye, with dark seared edge, cross-hatched char and a glossy butter medallion.
-    ctx.save(); ctx.translate(462, 402); ctx.rotate(-.075);
-    const crust = () => { ctx.beginPath(); ctx.moveTo(-78,-2); ctx.bezierCurveTo(-77,-20,-60,-28,-42,-23); ctx.bezierCurveTo(-23,-32,-5,-27,8,-22); ctx.bezierCurveTo(31,-30,60,-24,72,-10); ctx.bezierCurveTo(84,4,69,20,51,22); ctx.bezierCurveTo(32,29,10,23,-7,27); ctx.bezierCurveTo(-29,31,-62,23,-74,12); ctx.closePath(); };
-    ctx.shadowColor = '#28100d'; ctx.shadowBlur = 10; ctx.fillStyle = '#401914'; crust(); ctx.fill(); ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#f1b47a'; ctx.lineWidth = 2.5; crust(); ctx.stroke();
-    const center = ctx.createLinearGradient(0,-28,0,27);
-    center.addColorStop(0,'#c97951'); center.addColorStop(.3,'#a84c36'); center.addColorStop(.74,'#773126'); center.addColorStop(1,'#57211d');
-    ctx.fillStyle = center; ctx.beginPath(); ctx.moveTo(-72,-3); ctx.bezierCurveTo(-70,-17,-55,-23,-40,-19); ctx.bezierCurveTo(-21,-27,-6,-22,8,-18); ctx.bezierCurveTo(29,-25,55,-20,66,-8); ctx.bezierCurveTo(76,4,63,16,48,18); ctx.bezierCurveTo(30,24,9,18,-7,22); ctx.bezierCurveTo(-28,25,-56,19,-68,10); ctx.closePath(); ctx.fill();
-    ctx.save(); ctx.clip();
-    ctx.lineCap = 'round'; ctx.lineWidth = 5;
-    for (const [x,y] of [[-55,-23],[-30,-25],[-6,-22],[19,-23],[43,-18],[-67,-9],[-43,-11],[-18,-10],[7,-11],[31,-8],[55,-4],[-53,5],[-28,6],[-3,7],[22,7],[46,8]]) { ctx.strokeStyle='rgba(56,20,15,.76)'; ctx.beginPath(); ctx.moveTo(x-7,y+5); ctx.lineTo(x+9,y-6); ctx.stroke(); ctx.strokeStyle='rgba(255,193,126,.3)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x-5,y+3); ctx.lineTo(x+7,y-5); ctx.stroke(); ctx.lineWidth=5; }
-    ctx.restore();
-    const butter = ctx.createRadialGradient(4,-4,1,4,-4,16); butter.addColorStop(0,'#fff4c4'); butter.addColorStop(.45,'#f6cf77'); butter.addColorStop(1,'rgba(219,146,57,0)');
-    ctx.fillStyle=butter; ctx.beginPath(); ctx.ellipse(4,-4,17,10,-.2,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#657447'; ctx.beginPath(); ctx.ellipse(2,-7,5,1.7,-.5,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(7,-3,4,1.4,.45,0,Math.PI*2); ctx.fill();
-    ctx.restore();
-
     if (!prefersReducedMotion) {
-      for (let i=0;i<3;i++) {
-        const phase=(time*1.25+i*.8)%2.1, rise=phase/2.1, x=450+i*14;
-        ctx.globalAlpha=.23*(1-rise); ctx.strokeStyle='#fff0dc'; ctx.lineWidth=1.8;
-        ctx.beginPath(); ctx.moveTo(x,392-rise*28); ctx.bezierCurveTo(x-8,384-rise*28,x+8,379-rise*28,x,371-rise*28); ctx.stroke();
+      const sceneTime = cutscene?.time ?? time;
+      for (let i = 0; i < 4; i++) {
+        const phase = (sceneTime * .43 + i * .27) % 1;
+        const x = 436 + i * 20 + Math.sin(phase * 4 + i) * 5;
+        ctx.globalAlpha = Math.sin(phase * Math.PI) * .2;
+        ctx.strokeStyle = '#fff0dc'; ctx.lineWidth = 1.5 + phase * 2;
+        ctx.beginPath(); ctx.moveTo(x, 345 - phase * 35);
+        ctx.bezierCurveTo(x - 9, 334 - phase * 35, x + 12, 323 - phase * 35, x + 3, 310 - phase * 35); ctx.stroke();
       }
-      ctx.globalAlpha=1;
     }
     ctx.restore();
   }
@@ -2125,7 +2114,7 @@
     enemy.hit = Math.max(0, enemy.hit - dt);
     const hpChase = enemy.hp < enemy.hpTrail ? 2.8 : 7.5;
     enemy.hpTrail += (enemy.hp - enemy.hpTrail) * Math.min(1, hpChase * dt);
-    enemy.swing += dt * 11;
+    enemy.swing += dt * (2.6 + Math.min(1, Math.abs(enemy.vx) / 120) * 10);
     enemy.attackCooldown -= dt * (enemy.elite && enemy.enraged ? 1.35 : 1);
     if (enemy.type === 'garlic') {
       if (enemy.guarding > 0) enemy.guarding = Math.max(0, enemy.guarding - dt);
@@ -2842,7 +2831,7 @@
       const width = (whipping ? 228 : 144) * scale;
       const height = (whipping ? 158 : 144) * scale;
       const attackProgress = player.attack > 0 ? clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1) : 0;
-      const punchPulse = Math.sin(attackProgress * Math.PI);
+      const punchPulse = player.attack > 0 ? (attackProgress < .23 ? Math.sin(attackProgress / .23 * Math.PI / 2) : Math.pow(1 - (attackProgress - .23) / .77, 2)) : 0;
       const lunge = punchPulse * (player.attackCombo === 3 ? 15 : 9);
       const hurtPulse = clamp(player.hurt / 0.36, 0, 1);
       ctx.save();
@@ -2855,22 +2844,32 @@
       ctx.scale(1 - stride, 1 + stride);
       ctx.rotate((player.attack > 0 ? -player.face * punchPulse * 0.055 : 0) + player.face * hurtPulse * 0.09 + stepSway);
       ctx.scale(1 + punchPulse * 0.045 + hurtPulse * 0.035 + idleBreath, 1 - punchPulse * 0.035 - hurtPulse * 0.075 - idleBreath);
+      ctx.save();
       if (kicking) {
         // Hide the resting right foot while that same foot swings forward.
         ctx.beginPath(); ctx.rect(-width / 2 - 1, -height - 1, width + 2, height + 2);
         ctx.rect(width * .065, -height * .225, width * .22, height * .23);
         ctx.clip('evenodd');
       }
+      const spriteChanged = player.renderSprite && player.renderSprite !== sprite;
+      if (spriteChanged) { player.previousSprite = player.renderSprite; player.spriteChangedAt = performance.now(); }
+      player.renderSprite = sprite;
+      const blend = prefersReducedMotion || !player.previousSprite ? 1 : clamp((performance.now() - player.spriteChangedAt) / 75, 0, 1);
+      const alpha = ctx.globalAlpha;
+      if (blend < 1 && player.previousSprite.complete && player.previousSprite.naturalWidth) {
+        ctx.globalAlpha = alpha * (1 - blend);
+        ctx.drawImage(player.previousSprite, -width / 2, -height, width, height);
+      }
+      ctx.globalAlpha = alpha * blend;
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
-    }
-    if (kicking && art.hero.complete && art.hero.naturalWidth) {
-      const progress = clamp(1 - player.attack / player.attackDuration, 0, 1);
-      const snap = Math.sin(Math.PI * progress);
-      // Animate the drop's own right leg, pivoting at its hip.
-      ctx.save(); ctx.translate(x, y); ctx.scale(player.face, 1);
-      ctx.translate(21, -29); ctx.rotate(-snap * 1.25); ctx.scale(1, 1 + snap * .35);
-      ctx.drawImage(art.hero, art.hero.naturalWidth * .565, art.hero.naturalHeight * .775, art.hero.naturalWidth * .21, art.hero.naturalHeight * .225, -3, -3, 30, 32);
+      if (kicking) {
+        const snap = Math.sin(Math.PI * Math.pow(attackProgress, .65));
+        ctx.save(); ctx.translate(width * .146, -height * .202);
+        ctx.rotate(-snap * 1.35); ctx.scale(1, 1 + snap * .3);
+        ctx.drawImage(art.hero, art.hero.naturalWidth * .565, art.hero.naturalHeight * .775, art.hero.naturalWidth * .21, art.hero.naturalHeight * .225, -3, -3, width * .208, height * .222);
+        ctx.restore();
+      }
       ctx.restore();
     }
     if (player.attack > 0 && player.attackPose === 'punch' && player.attackCombo < 3) {
@@ -2939,7 +2938,7 @@
   function drawEnemy(enemy) {
     const movement = prefersReducedMotion ? 0 : clamp(Math.abs(enemy.vx) / 140, 0, 1);
     const idlePulse = prefersReducedMotion ? 0 : Math.sin(time * 2.5 + enemy.swing * 0.24);
-    const stepPulse = prefersReducedMotion ? 0 : Math.sin(time * 11 + enemy.swing);
+    const stepPulse = prefersReducedMotion ? 0 : Math.sin(enemy.swing);
     const bob = prefersReducedMotion ? 0 : Math.sin(time * 2.2 + enemy.swing * 0.26) * (1.6 + movement * 2.2) + Math.abs(stepPulse) * movement * 1.2;
     const x = enemy.x, y = enemy.y + bob;
     const indicatorScale = compactControlsQuery?.matches ? clamp(compactHudScale, 1, 1.8) : 1;
@@ -2948,7 +2947,7 @@
     const tellProgress = enemy.state === 'tell' ? clamp(1 - enemy.stateTime / tellDuration, 0, 1) : 0;
     const anticipation = prefersReducedMotion ? 0 : enemy.state === 'tell' ? Math.sin(tellProgress * Math.PI * 0.72) : 0;
     const attackProgress = enemy.state === 'attack' ? clamp(1 - enemy.stateTime / 0.28, 0, 1) : 0;
-    const attackPulse = prefersReducedMotion ? 0 : Math.sin(attackProgress * Math.PI);
+    const attackPulse = prefersReducedMotion ? 0 : attackProgress < .22 ? Math.sin(attackProgress / .22 * Math.PI / 2) : Math.pow(1 - (attackProgress - .22) / .78, 2);
     const hitPulse = clamp(enemy.hit / 0.22, 0, 1);
     ctx.fillStyle = '#0008';
     ctx.beginPath();
@@ -2967,7 +2966,7 @@
     }
     if (sprite?.complete && sprite.naturalWidth) {
       ctx.save();
-      ctx.translate(x + enemy.face * (attackPulse * 13 - anticipation * 3), y + bob - anticipation * 1.5 + attackPulse * 2);
+      ctx.translate(x + enemy.face * (attackPulse * 13 - anticipation * 3), y - anticipation * 3 + attackPulse * 3);
       ctx.globalAlpha *= spawnProgress;
       const spawnScale = 0.76 + spawnProgress * 0.24;
       if (enemy.hit > 0) ctx.filter = 'brightness(1.8) saturate(.5)';
