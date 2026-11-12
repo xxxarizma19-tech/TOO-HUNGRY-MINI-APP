@@ -156,10 +156,10 @@
   syncFullscreenButton();
 
   const levels = [
-    { name: 'КУХНЯ ФРИТЮРНИЦЫ', chapter: 'THE FIRST SIZZLE', chapterLine: 'Жар обжигает, но первый осколок уже зовёт вперёд.', accent: '#ff765e', boss: 'FRY KING', key: 'fryKing', background: 'assets/backgrounds/fry-kitchen-background.jpg', track: 1, trackTitle: 'BREAKFAST', waves: 4, ability: 'FIRE DASH', shard: 'ОСКОЛОК I', bossLine: 'ЗДЕСЬ ВСЁ ГОРЯЧЕЕ. ОСОБЕННО Я.', victoryLine: 'Фритюрница остыла. Даже картошка выдохнула.' },
-    { name: 'ПИЦЦЕРИЯ', chapter: 'A SLICE OF TROUBLE', chapterLine: 'За хрустящей корочкой спрятан второй осколок.', accent: '#ffc177', boss: 'PIZZA SLICE', key: 'pizzaSlice', background: 'assets/backgrounds/pizzeria-background.jpg', track: 2, trackTitle: 'BANK', waves: 6, ability: 'СОУСНЫЙ ХЛЫСТ', shard: 'ОСКОЛОК II', bossLine: 'ТВОЙ ПУТЬ ОТРЕЗАН. МОЙ КУСОК.', victoryLine: 'Последний кусок взят. Пиццерия закрывается.' },
-    { name: 'ХОЛОДНЫЙ СКЛАД', chapter: 'COLD STORAGE', chapterLine: 'На морозе искра слабеет. Капля всё равно не сдаётся.', accent: '#9bdfe9', boss: 'NUGGET BRUTE', key: 'nuggetBrute', background: 'assets/backgrounds/cold-storage-background.jpg', track: 3, trackTitle: 'BASE', waves: 8, ability: 'МОЩНЫЙ УДАР', shard: 'ОСКОЛОК III', bossLine: 'ЗАМОРОЖУ ТЕБЯ ДО САМОГО ФИНАЛА.', victoryLine: 'Наггет крошится. На этот раз — буквально.' },
-    { name: 'ПАРОВАЯ КУХНЯ', chapter: 'STEAM & STRINGS', chapterLine: 'Последний осколок спрятан за клубком живой пасты.', accent: '#ee8fca', boss: 'SPAGHETTI MONSTER', key: 'spaghettiMonster', background: 'assets/backgrounds/pasta-kitchen-background.jpg', track: 4, trackTitle: 'NO HOOK ft. GURME', waves: 10, shard: 'ОСКОЛОК IV', bossLine: 'ПОПРОБУЙ НЕ ЗАПУТАТЬСЯ В МОЁМ БИТЕ.', victoryLine: 'Спагетти распутаны. Поварской кошмар закончен.' },
+    { name: 'КУХНЯ ФРИТЮРНИЦЫ', chapter: 'THE FIRST SIZZLE', chapterLine: 'Жар обжигает, но первый осколок уже зовёт вперёд.', accent: '#ff765e', boss: 'FRY KING', key: 'fryKing', background: 'assets/backgrounds/fry-kitchen-background.jpg', track: 1, trackTitle: 'BREAKFAST', waves: 2, ability: 'FIRE DASH', shard: 'ОСКОЛОК I', bossLine: 'ЗДЕСЬ ВСЁ ГОРЯЧЕЕ. ОСОБЕННО Я.', victoryLine: 'Фритюрница остыла. Даже картошка выдохнула.' },
+    { name: 'ПИЦЦЕРИЯ', chapter: 'A SLICE OF TROUBLE', chapterLine: 'За хрустящей корочкой спрятан второй осколок.', accent: '#ffc177', boss: 'PIZZA SLICE', key: 'pizzaSlice', background: 'assets/backgrounds/pizzeria-background.jpg', track: 2, trackTitle: 'BANK', waves: 2, ability: 'СОУСНЫЙ ХЛЫСТ', shard: 'ОСКОЛОК II', bossLine: 'ТВОЙ ПУТЬ ОТРЕЗАН. МОЙ КУСОК.', victoryLine: 'Последний кусок взят. Пиццерия закрывается.' },
+    { name: 'ХОЛОДНЫЙ СКЛАД', chapter: 'COLD STORAGE', chapterLine: 'На морозе искра слабеет. Капля всё равно не сдаётся.', accent: '#9bdfe9', boss: 'NUGGET BRUTE', key: 'nuggetBrute', background: 'assets/backgrounds/cold-storage-background.jpg', track: 3, trackTitle: 'BASE', waves: 2, ability: 'МОЩНЫЙ УДАР', shard: 'ОСКОЛОК III', bossLine: 'ЗАМОРОЖУ ТЕБЯ ДО САМОГО ФИНАЛА.', victoryLine: 'Наггет крошится. На этот раз — буквально.' },
+    { name: 'ПАРОВАЯ КУХНЯ', chapter: 'STEAM & STRINGS', chapterLine: 'Последний осколок спрятан за клубком живой пасты.', accent: '#ee8fca', boss: 'SPAGHETTI MONSTER', key: 'spaghettiMonster', background: 'assets/backgrounds/pasta-kitchen-background.jpg', track: 4, trackTitle: 'NO HOOK ft. GURME', waves: 2, shard: 'ОСКОЛОК IV', bossLine: 'ПОПРОБУЙ НЕ ЗАПУТАТЬСЯ В МОЁМ БИТЕ.', victoryLine: 'Спагетти распутаны. Поварской кошмар закончен.' },
     { name: 'TOO HUNGRY', chapter: 'BACK TO THE TABLE', chapterLine: 'Четыре осколка собрались. Шеф и блюдо уже рядом.', accent: '#ffdc8a', boss: 'BURGER TOO HUNGRY', key: 'burger', background: 'assets/backgrounds/final-counter-background.jpg', track: 5, trackTitle: 'HOFMANNITA', finale: true }
   ];
 
@@ -416,7 +416,7 @@
     sauceRushMaxTime = 0;
     perfectDodgeTime = 0;
     counterTime = 0;
-    totalEnemies = stage.finale ? 0 : Array.from({ length: stage.waves }, (_, i) => 3 + levelIndex + Math.min(1, i)).reduce((sum, count) => sum + count, 0);
+    totalEnemies = stage.finale ? 0 : 5 + levelIndex;
     bossSpawned = false;
     bossIntro = 0;
     hazards = [];
@@ -449,7 +449,7 @@
   }
 
   function makeEnemy(x, type, elite = false) {
-    const baseHp = 76 + levelIndex * 20 + Math.max(0, waveIndex) * 4;
+    const baseHp = 118 + levelIndex * 22 + Math.max(0, waveIndex) * 6;
     const hp = Math.round(baseHp * (elite ? 1.5 : 1));
     return { x, y: 412 + Math.random() * 52, type, elite, enraged: false, hp, hpTrail: hp, maxHp: hp, alive: true, spawn: prefersReducedMotion ? 0 : 0.32, hit: 0, knockback: 0, timer: 0.7 + Math.random(), vx: 0, swing: Math.random() * 6, face: -1, state: 'idle', stateTime: 0, attackCooldown: (levelIndex === 0 ? 1.45 + Math.random() * 0.9 : 0.9 + Math.random() * 1.2) * (elite ? 0.82 : 1), guardCooldown: 1.2 + Math.random() * 2, guarding: 0 };
   }
@@ -2034,7 +2034,7 @@
   function spawnWave(index) {
     waveIndex = index;
     wavesCleared = index;
-    const amount = 3 + levelIndex + Math.min(1, index);
+    const amount = Math.floor((5 + levelIndex) / levels[levelIndex].waves) + (index < (5 + levelIndex) % levels[levelIndex].waves ? 1 : 0);
     const start = Math.max(540 + index * 1050, nextWaveAt - 160);
     const end = Math.min(worldWidth - 570, start + 760);
     fightGate = end + 110;
@@ -2169,7 +2169,7 @@
     if (enemy.state === 'idle') {
       enemy.timer -= dt;
       if (enemy.timer <= 0 && distance < 400) {
-        const speed = (enemy.type === 'pepper' ? 150 : enemy.type === 'mozzarella' ? 68 : 94) * (0.85 + levelIndex * 0.05);
+        const speed = (enemy.type === 'pepper' ? 150 : enemy.type === 'mozzarella' ? 68 : 94) * (0.98 + levelIndex * 0.04);
         enemy.vx = Math.sign(dx) * speed * (enemy.elite ? enemy.enraged ? 1.34 : 1.12 : 1);
         enemy.timer = enemy.type === 'pepper' ? 0.32 : 0.42;
       }
@@ -2398,7 +2398,7 @@
     player.combo = 0; player.comboTime = 0;
     const connected = hitTargets(118, 42, 48);
     if (connected) { player.finisher = prefersReducedMotion ? 0.12 : 0.2; shake = Math.max(shake, 4); }
-    burst(player.x + player.face * 67, player.y - 35, '#ffbd68', connected ? 13 : 6);
+    burst(player.x + player.face * 52, player.y - 20, '#ffbd68', connected ? 13 : 6);
     toast = connected ? 'УДАР НОГОЙ!' : 'УДАР НОГОЙ'; toastTime = 0.55;
     sound('kick'); haptic(connected ? 'medium' : 'light');
   }
@@ -2855,26 +2855,23 @@
       ctx.scale(1 - stride, 1 + stride);
       ctx.rotate((player.attack > 0 ? -player.face * punchPulse * 0.055 : 0) + player.face * hurtPulse * 0.09 + stepSway);
       ctx.scale(1 + punchPulse * 0.045 + hurtPulse * 0.035 + idleBreath, 1 - punchPulse * 0.035 - hurtPulse * 0.075 - idleBreath);
+      if (kicking) {
+        // Hide the resting right foot while that same foot swings forward.
+        ctx.beginPath(); ctx.rect(-width / 2 - 1, -height - 1, width + 2, height + 2);
+        ctx.rect(width * .065, -height * .225, width * .22, height * .23);
+        ctx.clip('evenodd');
+      }
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
     }
-    if (player.attack > 0 && player.attackPose === 'kick') {
-      const progress = clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1);
+    if (kicking && art.hero.complete && art.hero.naturalWidth) {
+      const progress = clamp(1 - player.attack / player.attackDuration, 0, 1);
       const snap = Math.sin(Math.PI * progress);
-      if (snap > 0.05) {
-        ctx.save(); ctx.translate(x + player.face * (8 + snap * 18), y - 48 - snap * 8); ctx.scale(player.face, 1);
-        ctx.rotate(-0.10 + progress * 0.18);
-        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#21191c'; ctx.lineWidth = 18;
-        ctx.beginPath(); ctx.moveTo(-6, 16); ctx.quadraticCurveTo(18, 25, 34 + snap * 24, 8); ctx.stroke();
-        ctx.strokeStyle = '#513239'; ctx.lineWidth = 12;
-        ctx.beginPath(); ctx.moveTo(-4, 14); ctx.quadraticCurveTo(19, 22, 34 + snap * 24, 8); ctx.stroke();
-        const boot = ctx.createLinearGradient(20, 1, 64, 14); boot.addColorStop(0, '#ffb36e'); boot.addColorStop(.52, '#ed4d3e'); boot.addColorStop(1, '#8f202c');
-        ctx.fillStyle = boot; ctx.strokeStyle = '#ffe0ac'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(32 + snap * 24, 1); ctx.quadraticCurveTo(47 + snap * 24, -2, 62 + snap * 24, 5); ctx.quadraticCurveTo(68 + snap * 24, 8, 63 + snap * 24, 14); ctx.lineTo(38 + snap * 24, 13); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.strokeStyle = '#fff0c5'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(42 + snap * 24, 5); ctx.lineTo(54 + snap * 24, 7); ctx.stroke();
-        ctx.restore();
-      }
+      // Animate the drop's own right leg, pivoting at its hip.
+      ctx.save(); ctx.translate(x, y); ctx.scale(player.face, 1);
+      ctx.translate(21, -29); ctx.rotate(-snap * 1.25); ctx.scale(1, 1 + snap * .35);
+      ctx.drawImage(art.hero, art.hero.naturalWidth * .565, art.hero.naturalHeight * .775, art.hero.naturalWidth * .21, art.hero.naturalHeight * .225, -3, -3, 30, 32);
+      ctx.restore();
     }
     if (player.attack > 0 && player.attackPose === 'punch' && player.attackCombo < 3) {
       const progress = clamp(1 - player.attack / (player.attackDuration || player.attack), 0, 1);
@@ -2997,7 +2994,7 @@
   function drawBurgerBoss() {
     const attack = boss.state === 'attack' ? Math.sin(Math.PI * clamp(1 - boss.timer / (boss.attackDuration || .52), 0, 1)) : 0;
     const breath = prefersReducedMotion ? 0 : Math.sin(time * 3) * .018;
-    if (boss.state === 'tell') drawBossTellZone();
+
     ctx.save(); ctx.translate(boss.x - attack * 28, boss.y);
     ctx.fillStyle = '#0009'; ctx.beginPath(); ctx.ellipse(0, 6, 105, 14, 0, 0, Math.PI * 2); ctx.fill();
     if (boss.state === 'tell') { text('!', -105, -205, 34, '#ff795f', 'center', 950); }
@@ -3037,7 +3034,7 @@
     ctx.fillStyle = '#0009';
     ctx.beginPath(); ctx.ellipse(x, boss.y + 9, 58, 12, 0, 0, Math.PI * 2); ctx.fill();
     if (boss.state === 'tell') {
-      drawBossTellZone();
+
       const tellSide = player.x >= x ? 1 : -1;
       text('!', x + tellSide * 65, y - dimensions - 18, 32, '#ff7059', 'center', 950);
     }
@@ -3055,77 +3052,6 @@
       ctx.restore();
     }
     ctx.globalAlpha = 1;
-  }
-
-  function drawBossTellZone() {
-    const key = levels[levelIndex].key;
-    const points = [];
-    if (boss.attack === 3) {
-      const count = key === 'spaghettiMonster' ? 5 : 3;
-      const spread = key === 'fryKing' ? 65 : key === 'nuggetBrute' ? 105 : key === 'pizzaSlice' ? 120 : 82;
-      for (let offset = 0; offset < count; offset++) {
-        const lane = offset - (count - 1) / 2;
-        points.push({ x: clamp(player.x + lane * spread, 42, worldWidth - 42), y: player.y, rx: key === 'nuggetBrute' ? 51 : 29, ry: key === 'nuggetBrute' ? 23 : 33 });
-      }
-    } else if (boss.attack === 1) {
-      if (key === 'burger') points.push({ x: boss.x, y: boss.y, rx: 165, ry: 52 });
-      else if (key === 'fryKing') points.push({ x: boss.x, y: boss.y, rx: 132, ry: 54 });
-      else if (key === 'pizzaSlice') points.push({ x: boss.x, y: boss.y, rx: 224, ry: 34 });
-      else if (key === 'nuggetBrute') points.push({ x: boss.x, y: boss.y, rx: 118, ry: 34 });
-      else if (key === 'spaghettiMonster') points.push({ x: boss.x, y: boss.y, rx: 280, ry: 34 });
-    } else if (key === 'fryKing' || key === 'spaghettiMonster') {
-      const spread = key === 'fryKing' ? 90 : 115;
-      [-1, 0, 1].forEach(offset => points.push({ x: clamp(player.x + offset * spread, 42, worldWidth - 42), y: player.y, rx: 29, ry: 33 }));
-    } else if (key === 'pizzaSlice') points.push({ x: clamp(player.x + player.face * 80, 42, worldWidth - 42), y: player.y, rx: 29, ry: 33 });
-    else points.push({ x: player.x, y: player.y, rx: 29, ry: 33 });
-
-    const pulse = prefersReducedMotion ? 0.58 : 0.28 + (0.5 + Math.sin(time * (boss.phase === 3 ? 30 : 20)) * 0.5) * 0.52;
-    const impactDelay = Math.max(0, boss.timer) + (boss.attack === 1 ? 0 : 0.43);
-    const impactHeight = projectedPlayerHeight(impactDelay);
-    ctx.save();
-    ctx.globalAlpha = pulse;
-    for (const zone of points) {
-      const dx = Math.abs(player.x - zone.x);
-      const dy = Math.abs(player.y - zone.y);
-      const inside = dx < zone.rx && dy < zone.ry;
-      let canEvadeByJump = false;
-      if (inside && boss.attack === 1) {
-        canEvadeByJump = key === 'fryKing' || key === 'pizzaSlice' ? impactHeight <= -25
-          : key === 'nuggetBrute' || key === 'spaghettiMonster' ? impactHeight < 0 && projectedPlayerHeight(impactDelay + 0.43) <= -45 : false;
-      } else if (inside) canEvadeByJump = impactHeight <= -45;
-      const color = inside ? canEvadeByJump ? 'safe' : 'danger' : 'clear';
-      ctx.fillStyle = color === 'danger' ? '#ff4338' : color === 'safe' ? '#43d9ad' : '#e8a35e';
-      ctx.strokeStyle = color === 'danger' ? '#ff8170' : color === 'safe' ? '#a5ffe0' : '#ffc98a';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([7, 5]);
-      ctx.beginPath();
-      ctx.rect(zone.x - zone.rx, zone.y + 5 - zone.ry, zone.rx * 2, zone.ry * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      if (color === 'safe') {
-        ctx.moveTo(zone.x, zone.y + 11); ctx.lineTo(zone.x, zone.y - 2);
-        ctx.moveTo(zone.x, zone.y - 2); ctx.lineTo(zone.x - 6, zone.y + 4);
-        ctx.moveTo(zone.x, zone.y - 2); ctx.lineTo(zone.x + 6, zone.y + 4);
-      } else if (color === 'danger') {
-        ctx.moveTo(zone.x - 5, zone.y); ctx.lineTo(zone.x + 5, zone.y + 10);
-        ctx.moveTo(zone.x + 5, zone.y); ctx.lineTo(zone.x - 5, zone.y + 10);
-      } else {
-        ctx.moveTo(zone.x - 8, zone.y + 5); ctx.lineTo(zone.x + 8, zone.y + 5);
-        ctx.moveTo(zone.x, zone.y - 3); ctx.lineTo(zone.x, zone.y + 13);
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function projectedPlayerHeight(seconds) {
-    if (!player || player.z === 0 && player.vz === 0) return 0;
-    const gravity = 1050;
-    const landingTime = (-player.vz + Math.sqrt(Math.max(0, player.vz ** 2 - 2 * gravity * player.z))) / gravity;
-    if (seconds >= landingTime) return 0;
-    return Math.min(0, player.z + player.vz * seconds + 0.5 * gravity * seconds ** 2);
   }
 
   function drawHazard(hazard) {
@@ -3183,19 +3109,6 @@
       ctx.beginPath(); ctx.ellipse(hazard.x, hazard.y, 34, 15, 0, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#ffbd83'; ctx.lineWidth = 2; ctx.stroke();
     }
-    const warning = hazard.life > 0.62;
-    const warningProgress = prefersReducedMotion ? 0.72 : clamp((1.05 - hazard.life) / 0.43, 0, 1);
-    ctx.globalAlpha = warning ? 0.42 : 0.92;
-    ctx.strokeStyle = warning ? '#fff0bd' : '#fff8e5';
-    ctx.lineWidth = warning ? 1.5 : 2.5;
-    ctx.lineCap = 'round';
-    ctx.setLineDash(warning ? [3, 5] : []);
-    ctx.strokeRect(hazard.x - 36, hazard.y - 25, 72, 50);
-    ctx.setLineDash([]);
-    ctx.globalAlpha = warning ? 0.88 : 1;
-    ctx.strokeStyle = warning ? '#ffe7a7' : '#fff8d8';
-    ctx.lineWidth = warning ? 2 : 3;
-    ctx.beginPath(); ctx.moveTo(hazard.x - 36, hazard.y + 29); ctx.lineTo(hazard.x - 36 + 72 * warningProgress, hazard.y + 29); ctx.stroke();
     ctx.restore();
   }
 
