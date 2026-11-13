@@ -228,6 +228,7 @@
   let cameraX = 0, worldWidth = W, waveIndex = -1, nextWaveAt = 620, fightGate = 0, wavesCleared = 0, enemiesDefeated = 0, totalEnemies = 0, waveQueue = [], waveKills = 0, waveReinforcementAt = 0, bossSpawned = false, bossIntro = 0;
   let running = false, playerMoving = false, time = 0, lastTime = 0, shake = 0, hitStop = 0, toast = '', toastTime = 0, stageIntroTime = 0, saveTimer = 0, streakKills = 0, streakTime = 0, sauceRushTime = 0, sauceRushMaxTime = 0, perfectDodgeTime = 0, counterTime = 0, attractAnimationFrame = 0, attractStartedAt = 0;
   let cutscene = null, pendingBossVictory = null;
+  let gameFrameId = 0, paused = false;
   let lastAnnouncement = '', announcementVersion = 0;
 
   function announce(message) {
@@ -337,14 +338,31 @@
     if (!numeric(checkpoint.playerX) || !numeric(checkpoint.hp, 1, maxPlayerHp) || !integer(checkpoint.kills, 0, 1e7)) return null;
     const stageWidth = stage.finale ? 4200 : 1900 + stage.waves * 1370;
     const playerX = clamp(checkpoint.playerX, 42, stageWidth - 42);
+    const playerY = numeric(checkpoint.playerY, 382, 477) ? checkpoint.playerY : stage.finale ? 452 : 420;
+    const pickups = Array.isArray(checkpoint.pickups) ? checkpoint.pickups.slice(0,16).filter(drop => drop && numeric(drop.x,42,stageWidth-42) && numeric(drop.y,200,500) && numeric(drop.amount,1,119) && numeric(drop.life,.01,120)).map(drop => ({ type: drop.type === 'medkit' ? 'medkit' : 'sauce', x: drop.x, y: drop.y, amount: drop.amount, life: drop.life, elite: drop.elite === true, fullRestore: drop.fullRestore === true })) : [];
     if (checkpoint.finale === true && stage.finale) {
-      return integer(checkpoint.obstacles, 0, 4) ? { stageIndex, finale: true, playerX, hp: clamp(checkpoint.hp, Math.ceil(maxPlayerHp / 2), maxPlayerHp), obstacles: checkpoint.obstacles, kills: checkpoint.kills, bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, ...(numeric(checkpoint.bossHp, 1, 1600) ? { bossHp: checkpoint.bossHp } : {}) } : null;
+      return integer(checkpoint.obstacles, 0, 4) ? { stageIndex, finale: true, playerX, playerY, pickups, hp: clamp(checkpoint.hp, Math.ceil(maxPlayerHp / 2), maxPlayerHp), obstacles: checkpoint.obstacles, kills: checkpoint.kills, bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, ...(numeric(checkpoint.bossHp, 1, 1600) ? { bossHp: checkpoint.bossHp } : {}) } : null;
     }
     if (checkpoint.finale === true || stage.finale || !integer(checkpoint.waveIndex, 0, stage.waves)) return null;
     if (checkpoint.boss === true ? checkpoint.waveIndex !== stage.waves : checkpoint.waveIndex >= stage.waves) return null;
-    const normalized = { bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, stageIndex, waveIndex: checkpoint.waveIndex, playerX, hp: checkpoint.hp, kills: checkpoint.kills, boss: checkpoint.boss === true };
-    const maxBossHp = 850 + stageIndex * 260;
+    const normalized = { bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, stageIndex, waveIndex: checkpoint.waveIndex, playerX, playerY, pickups, hp: checkpoint.hp, kills: checkpoint.kills, boss: checkpoint.boss === true };
+    const maxBossHp = stageIndex === 0 ? 680 : 850 + stageIndex * 260;
     if (normalized.boss) normalized.bossHp = numeric(checkpoint.bossHp, 1, maxBossHp) ? checkpoint.bossHp : maxBossHp;
+    const total = 5 + stageIndex;
+    const before = Array.from({ length: normalized.waveIndex }, (_, i) => Math.floor(total / stage.waves) + Number(i < total % stage.waves)).reduce((sum, n) => sum + n, 0);
+    if (normalized.boss) normalized.kills = total;
+    else {
+      const state = checkpoint.waveState;
+      const types = ['garlic','tomato','mozzarella','pepper'];
+      const validActor = entry => entry && types.includes(entry.type) && numeric(entry.x,42,stageWidth-42) && numeric(entry.y,382,477) && numeric(entry.hp,1,2000);
+      const validQueue = entry => entry && types.includes(entry.type) && numeric(entry.x,42,stageWidth-42);
+      const amount = Math.floor(total / stage.waves) + Number(normalized.waveIndex < total % stage.waves);
+      if (state?.v === 1 && Array.isArray(state.enemies) && Array.isArray(state.queue) && state.enemies.length <= 8 && state.queue.length <= 8 && state.enemies.every(validActor) && state.queue.every(validQueue) && integer(state.waveKills,0,amount) && state.enemies.length + state.queue.length === amount - state.waveKills && checkpoint.kills === before + state.waveKills && numeric(state.gate,0,stageWidth) && numeric(state.nextAt,0,stageWidth+2000)) {
+        normalized.waveState = { v: 1, gate: state.gate, nextAt: state.nextAt, waveKills: state.waveKills,
+          enemies: state.enemies.map(entry => ({ type: entry.type, x: entry.x, y: entry.y, hp: entry.hp, elite: entry.elite === true, enraged: entry.enraged === true, face: entry.face === 1 ? 1 : -1 })),
+          queue: state.queue.map(entry => ({ type: entry.type, x: entry.x, elite: entry.elite === true })) };
+      } else normalized.kills = before;
+    }
     return normalized;
   }
 
@@ -398,6 +416,7 @@
   }
 
   function startLevel(index, resume = false) {
+    stopGameLoop(); paused = false; resetGameInput();
     stopTitleAttract();
     stopMenuGamepadNavigation();
     const connectedGamepad = connectedStandardGamepad();
@@ -423,6 +442,7 @@
       player.hp = clamp(checkpoint.hp ?? player.maxHp, Math.ceil(player.maxHp / 2), player.maxHp);
       player.invuln = 1;
     }
+    if (checkpoint?.playerY) player.y = checkpoint.playerY;
     player.hpTrail = player.hp;
     enemies = [];
     boss = null;
@@ -448,6 +468,19 @@
     dashStains = [];
     drops = [];
     damageNumbers = [];
+    if (checkpoint?.pickups) drops = checkpoint.pickups.map(drop => ({ ...drop }));
+    if (checkpoint?.waveState && !checkpoint.boss && !stage.finale) {
+      const state = checkpoint.waveState;
+      waveIndex = checkpoint.waveIndex; fightGate = state.gate; nextWaveAt = state.nextAt;
+      waveKills = state.waveKills; wavesCleared = waveIndex;
+      waveQueue = state.queue.map(entry => ({ ...entry }));
+      enemies = state.enemies.map(saved => {
+        const enemy = makeEnemy(saved.x, saved.type, saved.elite);
+        Object.assign(enemy, { y: saved.y, hp: Math.min(saved.hp, enemy.maxHp), face: saved.face, enraged: saved.enraged, attackCooldown: 1, timer: .55 });
+        enemy.hpTrail = enemy.hp; return enemy;
+      });
+      waveReinforcementAt = waveQueue.length ? waveKills + 3 : Infinity;
+    }
     finaleObstacles = stage.finale ? [780, 1510, 2260, 3020].map((x, i) => ({ x, cleared: i < (checkpoint?.obstacles ?? 0) })) : [];
     time = 0;
     stageIntroTime = checkpoint ? 0 : 2.8;
@@ -469,7 +502,7 @@
     canvas.focus({ preventScroll: true });
     syncTelegramOrientationLock();
     lastTime = performance.now();
-    requestAnimationFrame(loop);
+    scheduleGameFrame();
   }
 
   function makeEnemy(x, type, elite = false) {
@@ -709,6 +742,7 @@
 
   function showOverlay(heading, body, buttonText, action) {
     stopTitleAttract();
+    stopGameLoop(); paused = false;
     document.querySelector('.panel')?.classList.remove('is-level-menu');
     running = false;
     telegramApp?.BackButton?.hide?.();
@@ -1076,6 +1110,7 @@
   }
 
   function playCutscene() {
+    stopGameLoop(); paused = false;
     running = false;
     music.pause();
     keys.clear();
@@ -1376,6 +1411,7 @@
   }
 
   function playEnding() {
+    stopGameLoop(); paused = false;
     stopMenuGamepadNavigation();
     prepareCutsceneGamepad();
     running = false;
@@ -1785,6 +1821,7 @@
         toastTime = 1.2;
       }
     }
+    if (!enemy.alive) saveReturnCheckpoint();
     return { damage, blocked };
   }
 
@@ -1836,6 +1873,7 @@
     if (toastTime > 0) toastTime -= dt;
     if (shake > 0) shake = Math.max(0, shake - 25 * dt);
 
+    const movementStartX = player.x, movementStartY = player.y;
     const left = keys.has('a') || keys.has('arrowleft') || touch.left || gamepad.left;
     const right = keys.has('d') || keys.has('arrowright') || touch.right || gamepad.right;
     const up = keys.has('w') || keys.has('arrowup') || touch.up || gamepad.up;
@@ -1843,11 +1881,6 @@
     const walking = left !== right || up !== down;
     playerMoving = walking;
     player.stepCooldown = Math.max(0, player.stepCooldown - dt);
-    if (walking && player.z === 0 && player.stepCooldown <= 0) {
-      sound('step');
-      player.stepCooldown = 0.36;
-    }
-    player.walk += dt * (walking ? 13 : 4);
     if (player.dash > 0) player.dash = Math.max(0, player.dash - dt);
     else {
       if (left !== right) {
@@ -1861,6 +1894,13 @@
     const maxX = boss?.alive ? boss.x - 48 : livingEnemies && fightGate > 0 ? fightGate : worldWidth - 42;
     player.x = clamp(player.x, 42, maxX);
     player.y = clamp(player.y, 382, 477);
+    const stepped = advanceGait(player, player.z === 0 ? player.x - movementStartX : 0, player.z === 0 ? player.y - movementStartY : 0, dt, 'hero');
+    player.walk = player.gaitPhase || 0;
+    playerMoving = Math.hypot(player.x - movementStartX,player.y - movementStartY) > .015;
+    if (stepped && player.z === 0 && player.stepCooldown <= 0) {
+      sound('step');player.stepCooldown=.1;
+      if(!prefersReducedMotion)dashStains.push({x:player.x-player.face*9,y:player.y+1,life:1.8,maxLife:1.8,size:2.5+Math.random()*1.5});
+    }
     cameraX = clamp(player.x - W * 0.38, 0, Math.max(0, worldWidth - W));
 
     if (player.z < 0 || player.vz < 0) {
@@ -2016,20 +2056,39 @@
     } else {
       gameState.checkpoint = { ...checkpoint, boss: false, playerX: player.x, hp: player.hp };
     }
+    gameState.checkpoint.playerY = player.y;
+    gameState.checkpoint.pickups = drops.filter(drop => drop.life > 0 && !drop.bossHealBit).slice(0, 16).map(drop => ({ type: drop.type === 'medkit' ? 'medkit' : 'sauce', x: drop.x, y: drop.y, amount: drop.amount, life: drop.life, elite: !!drop.elite, fullRestore: !!drop.fullRestore }));
+    if (!levels[levelIndex].finale && !boss?.alive && waveIndex >= 0) {
+      gameState.checkpoint.waveIndex = waveIndex;
+      gameState.checkpoint.kills = enemiesDefeated;
+      gameState.checkpoint.waveState = {
+        v: 1, gate: fightGate, nextAt: nextWaveAt, waveKills,
+        enemies: enemies.filter(enemy => enemy.alive).map(enemy => ({ type: enemy.type, x: clamp(enemy.x, 42, worldWidth - 42), y: enemy.y, hp: enemy.hp, elite: !!enemy.elite, enraged: !!enemy.enraged, face: enemy.face })),
+        queue: waveQueue.map(entry => ({ ...entry }))
+      };
+    } else delete gameState.checkpoint.waveState;
     saveProgress();
+  }
+
+  function resumeGame() {
+    if (!paused || !player || player.hp <= 0) return;
+    resetGameInput(); stopMenuGamepadNavigation();
+    const pad = connectedStandardGamepad(); gamepadId = pad?.id || null;
+    gamepadPressed = new Set(pad?.buttons.map((button, i) => button.pressed ? i : -1).filter(i => i >= 0) || []);
+    paused = false; running = true;
+    setOverlayVisible(false); document.body.classList.add('playing');
+    telegramApp?.BackButton?.show?.(); canvas.focus({ preventScroll: true });
+    if (musicEnabled && music.src) music.play().catch(() => {});
+    lastTime = performance.now(); scheduleGameFrame();
   }
 
   function pauseGame() {
     if (!running) return;
-    keys.clear();
-    touchAttackTimers.forEach(timer => window.clearInterval(timer));
-    touchAttackTimers.clear();
-    Object.keys(touch).forEach(direction => { touch[direction] = false; });
-    saveReturnCheckpoint();
-    music.pause();
-    showOverlay('ПАУЗА', 'Контрольная точка сохранена. При продолжении — минимум половина здоровья.', 'ПРОДОЛЖИТЬ', () => startLevel(levelIndex, true));
+    resetGameInput(); saveReturnCheckpoint(); music.pause();
+    showOverlay('ПАУЗА', 'Бой остановлен. Продолжишь с того же места. Контрольная точка сохранена отдельно.', 'ПРОДОЛЖИТЬ', resumeGame);
+    paused = true;
     if (returnToTitleButton) {
-      returnToTitleButton.hidden = false;
+      returnToTitleButton.hidden = false; returnToTitleButton.textContent = 'ВЫБРАТЬ УРОВЕНЬ';
       returnToTitleButton.onclick = showTitle;
     }
   }
@@ -2049,6 +2108,7 @@
 
   function updateEnemy(enemy, dt) {
     if (!enemy.alive) return;
+    const gaitStartX = enemy.x;
     enemy.spawn = Math.max(0, enemy.spawn - dt);
     enemy.hit = Math.max(0, enemy.hit - dt);
     const hpChase = enemy.hp < enemy.hpTrail ? 2.8 : 7.5;
@@ -2116,6 +2176,7 @@
       enemy.x = clamp(enemy.x + enemy.knockback * dt, 42, worldWidth - 42);
       enemy.knockback *= Math.pow(0.018, dt);
     } else enemy.knockback = 0;
+    advanceGait(enemy, enemy.state === 'idle' ? enemy.x-gaitStartX : 0, 0, dt, enemy.type);
     if (distance < 38 && depth < 32 && canBeHit() && enemy.state === 'idle') damagePlayer(levelIndex === 0 ? 3 : 5, enemy.x);
   }
 
@@ -2440,6 +2501,7 @@
       burst(boss.x, boss.y - 100, '#ffca69', 42);
       finishGame(); return;
     }
+    stopGameLoop();
     boss.state = 'defeated';
     gameState.shards = Math.max(gameState.shards, levelIndex + 1);
     gameState.dash = false; gameState.heavy = false;
@@ -2577,9 +2639,11 @@
     if (levels[levelIndex].finale) drawFinaleObstacles();
     for (const hazard of hazards) drawHazard(hazard);
     for (const drop of drops) drawDrop(drop);
-    for (const enemy of enemies) if (enemy.alive) drawEnemy(enemy);
-    if (boss?.alive) drawBoss();
-    drawPlayer();
+    // Feet determine arena depth, including while the hero jumps.
+    const actors = enemies.filter(enemy => enemy.alive).map(enemy => ({ y: enemy.y, draw: () => drawEnemy(enemy) }));
+    if (boss?.alive) actors.push({ y: boss.y, draw: drawBoss });
+    actors.push({ y: player.y, draw: drawPlayer });
+    actors.sort((a, b) => a.y - b.y).forEach(actor => actor.draw());
     drawParticles();
     drawDamageNumbers();
     ctx.restore();
@@ -2769,6 +2833,78 @@
     }
   }
 
+  const gaitRigs = {
+    hero: { stride: 120, duty:.4, lift: 15, skin: ['#ff7e4b','#e53b2c','#8c1e22'], outline:'#631b20', thickness:8, hips:[[.43,.82],[.57,.82]], feet:[[.18,.88,.17,.12],[.575,.88,.19,.10]], footSize:[24,14], masks:[[.15,.76,.25,.24],[.55,.78,.25,.22]] },
+    garlic: { stride:64, lift:9, skin:['#ffe2b0','#df9e67','#9d5141'],outline:'#70372c',thickness:6.5,hips:[[.39,.80],[.51,.80]],feet:[[.15,.86,.20,.14],[.55,.86,.20,.14]],footSize:[23,16],masks:[[.14,.78,.25,.22],[.51,.78,.27,.22]] },
+    tomato: { stride:66,lift:10,skin:['#ff774b','#cf2c22','#7e2025'],outline:'#641d20',thickness:6,hips:[[.41,.78],[.53,.78]],feet:[[.12,.86,.20,.14],[.61,.84,.22,.14]],footSize:[24,15],masks:[[.08,.77,.27,.23],[.59,.75,.26,.25]] },
+    mozzarella: { stride:46,lift:8,skin:['#fff4b5','#edb859','#a75d35'],outline:'#98512d',thickness:9,hips:[[.40,.84],[.52,.84]],feet:[[.17,.89,.20,.11],[.59,.89,.20,.11]],footSize:[25,12],masks:[[.15,.84,.25,.16],[.56,.84,.26,.16]] },
+    pepper: { stride:76,lift:16,skin:['#ff8153','#d92e24','#8d2028'],outline:'#681b20',thickness:5.5,hips:[[.36,.74],[.45,.73]],feet:[[.60,.75,.21,.155],[.60,.75,.21,.155]],footRotation:.60,footSize:[23,13],masks:[],polygons:[[[0,.61],[.28,.61],[.37,.76],[.27,.83],[0,.83]],[[.40,.65],[.86,.65],[.86,.95],[.51,.95],[.40,.80]]] }
+  };
+
+  function advanceGait(entity, dx, dy, dt, kind) {
+    const rig = gaitRigs[kind];
+    const distance = Math.hypot(dx, dy * .65);
+    const moving = distance > .015;
+    const previous = entity.gaitPhase || 0;
+    const direction = Math.abs(dx) > .01 ? Math.sign(dx * (entity.face || 1)) : 1;
+    entity.gaitPhase = previous + (moving ? distance * direction / rig.stride * Math.PI * 2 : 0);
+    entity.gaitBlend = clamp((entity.gaitBlend || 0) + dt * (moving ? 10 : -12), 0, 1);
+    entity.gaitSpeed = moving ? distance / Math.max(dt,.001) : 0;
+    return moving && Math.floor(previous / Math.PI) !== Math.floor(entity.gaitPhase / Math.PI);
+  }
+
+  function gaitFoot(kind, phase, leg, blend = 1) {
+    const rig=gaitRigs[kind], duty=rig.duty||.6;
+    const u=((phase/(Math.PI*2)+leg*.5)%1+1)%1, span=rig.stride*duty;
+    if(u<duty)return {x:span*(.5-u/duty)*blend,y:0,angle:0,planted:true};
+    const t=(u-duty)/(1-duty), smooth=t*t*(3-2*t);
+    return {x:(-.5+smooth)*span*blend,y:-Math.sin(t*Math.PI)*rig.lift*blend,angle:-Math.sin(t*Math.PI)*.18*blend,planted:false};
+  }
+
+  function clipStandingLegs(kind,width,height,anchor=.5) {
+    const rig=gaitRigs[kind];
+    ctx.beginPath();ctx.rect(-width*anchor-2,-height-2,width+4,height+4);
+    for(const [x,y,w,h]of rig.masks)ctx.rect((x-anchor)*width,(y-1)*height,w*width,h*height+2);
+    for(const polygon of rig.polygons||[]){polygon.forEach(([x,y],i)=>{if(i)ctx.lineTo((x-anchor)*width,(y-1)*height);else ctx.moveTo((x-anchor)*width,(y-1)*height)});ctx.closePath()}
+    ctx.clip('evenodd');
+  }
+
+  const footTextureCache = new WeakMap();
+  function gaitFootTexture(image,crop,rotation=0) {
+    let textures=footTextureCache.get(image);if(!textures){textures=new Map();footTextureCache.set(image,textures)}
+    const key=crop.join(',')+':'+rotation;if(textures.has(key))return textures.get(key);
+    const sw=Math.ceil(crop[2]*image.naturalWidth),sh=Math.ceil(crop[3]*image.naturalHeight),extent=Math.ceil(Math.hypot(sw,sh))+4;
+    const surface=document.createElement('canvas');surface.width=surface.height=extent;const gc=surface.getContext('2d',{willReadFrequently:true});
+    gc.translate(extent/2,extent/2);gc.rotate(rotation);gc.drawImage(image,crop[0]*image.naturalWidth,crop[1]*image.naturalHeight,sw,sh,-sw/2,-sh/2,sw,sh);gc.setTransform(1,0,0,1,0,0);
+    try{const pixels=gc.getImageData(0,0,extent,extent).data;let x0=extent,y0=extent,x1=0,y1=0;for(let y=0;y<extent;y++)for(let x=0;x<extent;x++)if(pixels[(y*extent+x)*4+3]>32){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+      const texture={surface,x:x0,y:y0,width:Math.max(1,x1-x0+1),height:Math.max(1,y1-y0+1)};textures.set(key,texture);return texture;
+    }catch{const texture={surface,x:0,y:0,width:extent,height:extent};textures.set(key,texture);return texture}
+  }
+
+  function drawGaitLegs(image,kind,phase,blend,width,height,anchor=.5,bodyX=0,bodyY=0) {
+    const rig=gaitRigs[kind];
+    for(let leg=0;leg<2;leg++){
+      const step=gaitFoot(kind,phase,leg,blend), hipX=(rig.hips[leg][0]-anchor)*width+bodyX,hipY=(rig.hips[leg][1]-1)*height+bodyY;
+      const hipCentre=(rig.hips[0][0]+rig.hips[1][0])*.5;
+      const walkBase=(hipCentre-anchor)*width+(leg===0?-4:4);
+      const neutral=kind==='pepper'?walkBase:(rig.feet[leg][0]+rig.feet[leg][2]*.5-anchor)*width;
+      const footX=neutral*(1-blend)+walkBase*blend+step.x,footY=step.y;
+      const ankleY=footY-rig.footSize[1]*.6;
+      const dx=footX-hipX,dy=ankleY-hipY,distance=Math.max(1,Math.hypot(dx,dy));
+      const kneeBend=step.planted?2.5:Math.min(10,height*.075);
+      const kneeX=hipX+dx*.5+dy/distance*kneeBend,kneeY=hipY+dy*.5-dx/distance*kneeBend;
+      ctx.save();if(leg===0)ctx.filter='brightness(.84)';ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.strokeStyle=rig.outline;ctx.lineWidth=rig.thickness+2.4;ctx.beginPath();ctx.moveTo(hipX,hipY);ctx.quadraticCurveTo(kneeX,kneeY,footX,ankleY);ctx.stroke();
+      const skin=ctx.createLinearGradient(hipX-4,hipY,footX+5,ankleY);rig.skin.forEach((color,i)=>skin.addColorStop(i/2,color));ctx.strokeStyle=skin;ctx.lineWidth=rig.thickness;ctx.stroke();
+      ctx.strokeStyle=rig.skin[0];ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(hipX-1,hipY+3);ctx.lineTo(kneeX-1,kneeY);ctx.stroke();
+      ctx.translate(footX,footY);ctx.rotate(step.angle);
+      if(rig.feet){const texture=gaitFootTexture(image,rig.feet[leg],rig.footRotation||0);ctx.drawImage(texture.surface,texture.x,texture.y,texture.width,texture.height,-rig.footSize[0]*.47,-rig.footSize[1]+.3,rig.footSize[0],rig.footSize[1])}
+      else {const boot=ctx.createLinearGradient(0,-13,0,0);boot.addColorStop(0,'#ff8860');boot.addColorStop(.45,'#d92c25');boot.addColorStop(1,'#7d2025');ctx.fillStyle=boot;ctx.strokeStyle='#58191e';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-10,-2);ctx.lineTo(-9,-12);ctx.quadraticCurveTo(-2,-15,3,-8);ctx.quadraticCurveTo(17,-8,14,-1);ctx.lineTo(-10,-1);ctx.fill();ctx.stroke();ctx.strokeStyle='#ffd4a0';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-9,-1);ctx.lineTo(13,-1);ctx.stroke()}
+      ctx.restore();
+    }
+  }
+
+
   function drawPlayer() {
     const x = player.x;
     const y = player.y + player.z;
@@ -2840,9 +2976,11 @@
     const alternateRunFrame = Math.floor(player.walk / Math.PI) % 2 === 1 && art.heroRunAlt.complete && art.heroRunAlt.naturalWidth;
     const runSprite = alternateRunFrame ? art.heroRunAlt : art.heroRun;
     const kicking = player.attack > 0 && player.attackPose === 'kick';
-    const sprite = dodging && art.heroDodge.complete && art.heroDodge.naturalWidth ? art.heroDodge : player.attack > 0 && player.attackPose === 'heavy' && art.heroHeavy.complete && art.heroHeavy.naturalWidth ? art.heroHeavy : player.attack > 0 && player.attackPose === 'whip' ? art.hero : kicking ? art.hero : player.attack > 0 ? art.heroPunch : player.z < 0 && art.heroJump.complete && art.heroJump.naturalWidth ? art.heroJump : isMoving ? runSprite : art.hero;
+    const punching = player.attack > 0 && player.attackPose === 'punch';
+    const gaitActive = player.z === 0 && !kicking;
+    const sprite = dodging && art.heroDodge.complete && art.heroDodge.naturalWidth ? art.heroDodge : player.attack > 0 && player.attackPose === 'heavy' && art.heroHeavy.complete && art.heroHeavy.naturalWidth ? art.heroHeavy : player.attack > 0 && player.attackPose === 'whip' ? art.hero : kicking || punching ? art.hero : player.attack > 0 ? art.heroPunch : player.z < 0 && art.heroJump.complete && art.heroJump.naturalWidth ? art.heroJump : isMoving ? art.hero : art.hero;
     if (sprite.complete && sprite.naturalWidth) {
-      const bounce = prefersReducedMotion ? 0 : isMoving ? -Math.abs(Math.sin(player.walk)) * 5 : Math.sin(time * 3.4) * 2;
+      const bounce = prefersReducedMotion ? 0 : gaitActive && isMoving ? -Math.pow(Math.sin(player.walk),2)*1.8 : Math.sin(time*3.4)*1;
       const scale = player.z < 0 ? 1.04 : 1;
       const whipping = player.attack > 0 && player.attackPose === 'whip';
       const width = 144 * scale;
@@ -2851,6 +2989,7 @@
       const punchPulse = player.attack > 0 ? (attackProgress < .23 ? Math.sin(attackProgress / .23 * Math.PI / 2) : Math.pow(1 - (attackProgress - .23) / .77, 2)) : 0;
       const lunge = punchPulse * (player.attackCombo === 3 ? 15 : 9);
       const hurtPulse = clamp(player.hurt / 0.36, 0, 1);
+      if(gaitActive){ctx.save();ctx.translate(x,y);ctx.scale(player.face,1);drawGaitLegs(art.hero,'hero',player.walk||0,player.gaitBlend||0,width,height,.5,lunge,bounce);ctx.restore()}
       ctx.save();
       ctx.translate(x + player.face * lunge, y + bounce + punchPulse * 2);
       ctx.scale(player.face, 1);
@@ -2862,13 +3001,14 @@
       ctx.rotate((player.attack > 0 ? -player.face * punchPulse * 0.055 : 0) + player.face * hurtPulse * 0.09 + stepSway);
       ctx.scale(1 + punchPulse * 0.045 + hurtPulse * 0.035 + idleBreath, 1 - punchPulse * 0.035 - hurtPulse * 0.075 - idleBreath);
       ctx.save();
+      if(gaitActive)clipStandingLegs('hero',width,height);
       if (kicking) {
         // Hide the resting right foot while that same foot swings forward.
         ctx.beginPath(); ctx.rect(-width / 2 - 1, -height - 1, width + 2, height + 2);
         ctx.rect(width * .065, -height * .225, width * .22, height * .23);
         ctx.clip('evenodd');
       }
-      if (whipping) {
+      if (whipping || punching) {
         ctx.beginPath(); ctx.rect(-width / 2 - 1, -height - 1, width + 2, height + 2);
         ctx.rect(width * .245, -height * .49, width * .24, height * .29);
         ctx.clip('evenodd');
@@ -2885,6 +3025,12 @@
       ctx.globalAlpha = alpha * blend;
       ctx.drawImage(sprite, -width / 2, -height, width, height);
       ctx.restore();
+      if(punching && art.heroPunch.complete && art.heroPunch.naturalWidth){
+        ctx.save();ctx.translate(width*.21,-height*.43);
+        const extension=.25+punchPulse*(player.attackCombo===3?1.15:.85);
+        ctx.drawImage(art.heroPunch,art.heroPunch.naturalWidth*.60,art.heroPunch.naturalHeight*.46,art.heroPunch.naturalWidth*.23,art.heroPunch.naturalHeight*.24,-7,-17,38*extension,35);
+        ctx.drawImage(art.heroPunch,art.heroPunch.naturalWidth*.82,art.heroPunch.naturalHeight*.46,art.heroPunch.naturalWidth*.18,art.heroPunch.naturalHeight*.24,-7+38*extension,-17,29,35);ctx.restore();
+      }
       if (whipping && art.heroPunch.complete && art.heroPunch.naturalWidth) {
         const reach = Math.sin(Math.PI * Math.pow(attackProgress, .65));
         ctx.save(); ctx.translate(width * .21, -height * .43);
@@ -2976,7 +3122,9 @@
     const idlePulse = prefersReducedMotion ? 0 : Math.sin(time * 2.5 + enemy.swing * 0.24);
     const stepPulse = prefersReducedMotion ? 0 : Math.sin(enemy.swing);
     const bob = prefersReducedMotion ? 0 : Math.sin(time * 2.2 + enemy.swing * 0.26) * (1.6 + movement * 2.2) + Math.abs(stepPulse) * movement * 1.2;
-    const x = enemy.x, y = enemy.y + bob;
+    const gaitActive = enemy.state === 'idle';
+    const bodyBob = gaitActive && enemy.gaitSpeed > 4 ? -Math.pow(Math.sin(enemy.gaitPhase||0),2)*1.3 : bob*.45;
+    const x = enemy.x, y = enemy.y + bodyBob;
     const indicatorScale = compactControlsQuery?.matches ? clamp(compactHudScale, 1, 1.8) : 1;
     const spawnProgress = enemy.spawn > 0 ? 1 - enemy.spawn / 0.32 : 1;
     const tellDuration = ((enemy.type === 'pepper' ? 0.3 : enemy.type === 'mozzarella' ? 0.72 : 0.52) + (levelIndex === 0 ? 0.18 : 0)) * (enemy.elite ? enemy.enraged ? 0.64 : 0.82 : 1);
@@ -3001,18 +3149,22 @@
       ctx.globalAlpha = 1;
     }
     if (sprite?.complete && sprite.naturalWidth) {
+      const anchor = hasAttackFrame ? ({garlic:.39,tomato:.37,mozzarella:.40,pepper:.59}[enemy.type]) : ({garlic:.43,tomato:.45,mozzarella:.43,pepper:.53}[enemy.type]);
+      const spriteWidth = Math.min(240,112*sprite.naturalWidth/sprite.naturalHeight);
+      if(gaitActive){ctx.save();ctx.translate(x,enemy.y);ctx.scale(enemy.face,1);drawGaitLegs(sprite,enemy.type,enemy.gaitPhase||0,enemy.gaitBlend||0,spriteWidth,112,anchor,0,bodyBob);ctx.restore()}
       ctx.save();
       ctx.translate(x + enemy.face * (attackPulse * 13 - anticipation * 3), y - anticipation * 3 + attackPulse * 3);
       ctx.globalAlpha *= spawnProgress;
       const spawnScale = 0.76 + spawnProgress * 0.24;
       if (enemy.hit > 0) ctx.filter = 'brightness(1.8) saturate(.5)';
       const lean = clamp(enemy.vx * 0.00055 - enemy.face * anticipation * 0.1 + enemy.face * attackPulse * 0.075 - Math.sign(enemy.knockback) * hitPulse * 0.13 + idlePulse * 0.012, -0.34, 0.34);
-      ctx.rotate(lean);
+      ctx.scale(enemy.face,1);
+      ctx.rotate(lean*enemy.face);
       const squash = anticipation * 0.035 + attackPulse * 0.055 + hitPulse * 0.04;
       const stretch = anticipation * 0.025 + attackPulse * 0.045 + movement * Math.abs(stepPulse) * 0.012;
       ctx.scale(spawnScale * (1 + idlePulse * 0.018 + stretch - squash * 0.25), spawnScale * (1 - idlePulse * 0.014 - stretch + squash));
-      const spriteWidth = hasAttackFrame ? Math.min(220, 112 * sprite.naturalWidth / sprite.naturalHeight) : 108;
-      ctx.drawImage(sprite, -spriteWidth / 2, -112, spriteWidth, 112);
+      if(gaitActive)clipStandingLegs(enemy.type,spriteWidth,112,anchor);
+      ctx.drawImage(sprite, -spriteWidth * anchor, -112, spriteWidth, 112);
       ctx.restore();
     }
     const barWidth = 50 * indicatorScale;
@@ -3531,6 +3683,21 @@
     ctx.restore();
   }
 
+  function resetGameInput() {
+    keys.clear(); Object.keys(touch).forEach(direction => { touch[direction] = false; });
+    touchAttackTimers.forEach(timer => window.clearInterval(timer)); touchAttackTimers.clear();
+  }
+
+  function stopGameLoop() {
+    if (gameFrameId) cancelAnimationFrame(gameFrameId);
+    gameFrameId = 0;
+  }
+
+  function scheduleGameFrame() {
+    if (!running || gameFrameId) return;
+    gameFrameId = requestAnimationFrame(now => { gameFrameId = 0; loop(now); });
+  }
+
   function loop(now) {
     if (!running) return;
     const dt = Math.min(0.033, (now - lastTime) / 1000 || 0);
@@ -3538,7 +3705,7 @@
     if (hitStop > 0) hitStop = Math.max(0, hitStop - dt);
     else update(dt);
     draw();
-    if (running) requestAnimationFrame(loop);
+    if (running) scheduleGameFrame();
   }
 
   player = newPlayer();
