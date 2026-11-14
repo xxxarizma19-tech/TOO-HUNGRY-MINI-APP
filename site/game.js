@@ -229,6 +229,7 @@
   let running = false, playerMoving = false, time = 0, lastTime = 0, shake = 0, hitStop = 0, toast = '', toastTime = 0, stageIntroTime = 0, saveTimer = 0, streakKills = 0, streakTime = 0, sauceRushTime = 0, sauceRushMaxTime = 0, perfectDodgeTime = 0, counterTime = 0, attractAnimationFrame = 0, attractStartedAt = 0;
   let cutscene = null, pendingBossVictory = null;
   let gameFrameId = 0, paused = false;
+  let finaleMiniDefeated = false, finaleMiniSpawned = false, finaleMiniSavedHp = 900, finaleBarriers = [];
   let lastAnnouncement = '', announcementVersion = 0;
 
   function announce(message) {
@@ -341,12 +342,12 @@
     const playerY = numeric(checkpoint.playerY, 382, 477) ? checkpoint.playerY : stage.finale ? 452 : 420;
     const pickups = Array.isArray(checkpoint.pickups) ? checkpoint.pickups.slice(0,16).filter(drop => drop && numeric(drop.x,42,stageWidth-42) && numeric(drop.y,200,500) && numeric(drop.amount,1,119) && numeric(drop.life,.01,120)).map(drop => ({ type: drop.type === 'medkit' ? 'medkit' : 'sauce', x: drop.x, y: drop.y, amount: drop.amount, life: drop.life, elite: drop.elite === true, fullRestore: drop.fullRestore === true })) : [];
     if (checkpoint.finale === true && stage.finale) {
-      return integer(checkpoint.obstacles, 0, 4) ? { stageIndex, finale: true, playerX, playerY, pickups, hp: clamp(checkpoint.hp, Math.ceil(maxPlayerHp / 2), maxPlayerHp), obstacles: checkpoint.obstacles, kills: checkpoint.kills, bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, ...(numeric(checkpoint.bossHp, 1, 1600) ? { bossHp: checkpoint.bossHp } : {}) } : null;
+      return integer(checkpoint.obstacles, 0, 4) ? { stageIndex, finale: true, playerX, playerY, pickups, hp: clamp(checkpoint.hp, Math.ceil(maxPlayerHp / 2), maxPlayerHp), obstacles: checkpoint.obstacles, miniDefeated: checkpoint.miniDefeated === true || numeric(checkpoint.bossHp,1,bossHealth(4)), miniHp: numeric(checkpoint.miniHp,1,900) ? checkpoint.miniHp : 900, kills: checkpoint.kills, bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, ...(numeric(checkpoint.bossHp, 1, bossHealth(4)) ? { bossHp: checkpoint.bossHp } : {}) } : null;
     }
     if (checkpoint.finale === true || stage.finale || !integer(checkpoint.waveIndex, 0, stage.waves)) return null;
     if (checkpoint.boss === true ? checkpoint.waveIndex !== stage.waves : checkpoint.waveIndex >= stage.waves) return null;
     const normalized = { bossHealMask: integer(checkpoint.bossHealMask, 0, 3) ? checkpoint.bossHealMask : 0, stageIndex, waveIndex: checkpoint.waveIndex, playerX, playerY, pickups, hp: checkpoint.hp, kills: checkpoint.kills, boss: checkpoint.boss === true };
-    const maxBossHp = stageIndex === 0 ? 680 : 850 + stageIndex * 260;
+    const maxBossHp = bossHealth(stageIndex);
     if (normalized.boss) normalized.bossHp = numeric(checkpoint.bossHp, 1, maxBossHp) ? checkpoint.bossHp : maxBossHp;
     const total = 5 + stageIndex;
     const before = Array.from({ length: normalized.waveIndex }, (_, i) => Math.floor(total / stage.waves) + Number(i < total % stage.waves)).reduce((sum, n) => sum + n, 0);
@@ -482,6 +483,13 @@
       waveReinforcementAt = waveQueue.length ? waveKills + 3 : Infinity;
     }
     finaleObstacles = stage.finale ? [780, 1510, 2260, 3020].map((x, i) => ({ x, cleared: i < (checkpoint?.obstacles ?? 0) })) : [];
+    if (stage.finale) {
+      finaleMiniDefeated = !!checkpoint?.miniDefeated;
+      finaleMiniSpawned = finaleMiniDefeated;
+      finaleMiniSavedHp = checkpoint?.miniHp || 900;
+      finaleBarriers = [1120,1880,2670].map((x,i)=>({ x, type: i===1 ? 'steam' : 'skewer', cycle: Math.random()*2, hit:false }));
+      finaleObstacles.forEach(o=>Object.assign(o,{ cycle:Math.random()*2, state:'low', timer:1.2+Math.random()*1.4 }));
+    }
     time = 0;
     stageIntroTime = checkpoint ? 0 : 2.8;
     shake = 0;
@@ -505,8 +513,10 @@
     scheduleGameFrame();
   }
 
+  function bossHealth(index) { return [1100, 1500, 1950, 2450, 3400][index]; }
+
   function makeEnemy(x, type, elite = false) {
-    const baseHp = 118 + levelIndex * 22 + Math.max(0, waveIndex) * 6;
+    const baseHp = 150 + levelIndex * 44 + Math.max(0, waveIndex) * 12;
     const hp = Math.round(baseHp * (elite ? 1.5 : 1));
     return { x, y: 412 + Math.random() * 52, type, elite, enraged: false, hp, hpTrail: hp, maxHp: hp, alive: true, spawn: prefersReducedMotion ? 0 : 0.32, hit: 0, knockback: 0, timer: 0.7 + Math.random(), vx: 0, swing: Math.random() * 6, face: -1, state: 'idle', stateTime: 0, attackCooldown: (levelIndex === 0 ? 1.45 + Math.random() * 0.9 : 0.9 + Math.random() * 1.2) * (elite ? 0.82 : 1), guardCooldown: 1.2 + Math.random() * 2, guarding: 0 };
   }
@@ -1709,11 +1719,13 @@
       }
     }
     if (boss?.alive && bossIntro <= 0 && Math.abs(boss.x - player.x) < range + 18 && (boss.x - player.x) * player.face > -18 && Math.abs(boss.y - player.y) < depth + 15 && boss.stun <= 0) {
-      boss.hp -= hitDamage;
+      const armor = boss.state === 'recover' ? 1.25 : boss.state === 'attack' ? .35 : boss.state === 'tell' ? .55 : .8;
+      const dealt = Math.max(1, Math.round(hitDamage * armor));
+      boss.hp -= dealt;
       dropBossHealing();
-      spawnDamageNumber(boss.x, boss.y - 154, hitDamage, false, counterTime > 0, true);
+      spawnDamageNumber(boss.x, boss.y - 154, dealt, armor < 1, counterTime > 0, true);
       counterHit = true;
-      boss.stun = 0.22;
+      boss.stun = 0.10;
       burst(boss.x - 25, boss.y - 60, counterTime > 0 ? '#fff0ad' : '#ffca73', counterTime > 0 ? 18 : 10);
       shake = Math.max(shake, 5);
       if (boss.hp <= 0) winBoss();
@@ -1742,7 +1754,7 @@
     }
     enemy.hp -= damage;
     enemy.hit = 0.22;
-    enemy.knockback = Math.sign(enemy.x - player.x || player.face) * Math.min(270, damage * (blocked ? 4 : 6));
+    enemy.knockback = Math.sign(enemy.x - player.x || player.face) * Math.min(enemy.miniBoss ? 60 : 190, damage * (blocked ? 2 : 3) / (1 + levelIndex * .18));
     if (enemy.elite && !enemy.enraged && enemy.hp > 0 && enemy.hp <= enemy.maxHp * 0.45) {
       enemy.enraged = true;
       enemy.attackCooldown = Math.min(enemy.attackCooldown, 0.28);
@@ -1758,6 +1770,12 @@
     if (finisherHit) shake = Math.max(shake, 4.2);
     if (enemy.hp <= 0) {
       enemy.alive = false;
+      if (enemy.miniBoss) {
+        finaleMiniDefeated = true; fightGate = 0;
+        drops.push({type:'medkit',x:enemy.x-60,y:enemy.y-24,life:60,amount:Math.ceil(player.maxHp*.3)});
+        toast='ПЕРЕЦ-ПОДЖИГАТЕЛЬ ПОБЕЖДЁН · ДАЛЬШЕ БУРГЕР'; toastTime=2.5;
+        saveReturnCheckpoint(); saveProgress(); return {damage,blocked};
+      }
       enemiesDefeated++;
       waveKills++;
       gameState.runKills = (gameState.runKills || 0) + 1;
@@ -1982,7 +2000,7 @@
       return;
     }
     if (!bossSpawned && player.x >= worldWidth - W * 0.86) {
-      const maxHp = levelIndex === 0 ? 680 : 850 + levelIndex * 260;
+      const maxHp = bossHealth(levelIndex);
       const savedBoss = gameState.checkpoint?.stageIndex === levelIndex && gameState.checkpoint?.boss ? gameState.checkpoint : null;
       const hp = Math.min(maxHp, savedBoss?.bossHp ?? maxHp);
       boss = { healMask: savedBoss?.bossHealMask || 0, healCollected: savedBoss?.bossHealMask || 0, x: worldWidth - 205, y: 414, hp, hpTrail: hp, maxHp, alive: true, state: 'idle', timer: 1.25, stun: 0, phase: hp / maxHp > 0.55 ? 1 : hp / maxHp > 0.24 ? 2 : 3, phaseFlash: 0, attack: 1, lastAttack: 0, chainRemaining: 0, hitDone: false };
@@ -2050,7 +2068,7 @@
     const checkpoint = gameState.checkpoint;
     if (!checkpoint || checkpoint.stageIndex !== levelIndex) return;
     if (levels[levelIndex].finale) {
-      gameState.checkpoint = { ...checkpoint, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, ...(boss?.alive ? { bossHp: Math.max(1, boss.hp), bossHealMask: boss.healCollected || 0 } : {}) };
+      gameState.checkpoint = { ...checkpoint, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, miniDefeated: finaleMiniDefeated, miniHp: enemies.find(e=>e.miniBoss&&e.alive)?.hp || finaleMiniSavedHp, ...(boss?.alive ? { bossHp: Math.max(1, boss.hp), bossHealMask: boss.healCollected || 0 } : {}) };
     } else if (boss?.alive) {
       gameState.checkpoint = { ...checkpoint, boss: true, bossHp: boss.hp, bossHealMask: boss.healCollected || 0, playerX: player.x, hp: player.hp, kills: enemiesDefeated };
     } else {
@@ -2108,7 +2126,7 @@
 
   function updateEnemy(enemy, dt) {
     if (!enemy.alive) return;
-    const gaitStartX = enemy.x;
+    const gaitStartX = enemy.x, gaitStartY = enemy.y;
     enemy.spawn = Math.max(0, enemy.spawn - dt);
     enemy.hit = Math.max(0, enemy.hit - dt);
     const hpChase = enemy.hp < enemy.hpTrail ? 2.8 : 7.5;
@@ -2140,12 +2158,13 @@
       if (enemy.stateTime <= 0) {
         enemy.state = 'attack';
         enemy.stateTime = 0.28;
+        if (enemy.miniBoss) performMiniAttack(enemy);
         if (enemy.type === 'tomato' && distance > 115) {
           const flight = 0.7;
           hazards.push({ type: 'tomato', x: enemy.x, y: enemy.y - 76, startX: enemy.x, startY: enemy.y - 76, targetX: player.x, targetY: player.y - 8, flight, elapsed: 0, damage: (levelIndex === 0 ? 8 : 11 + levelIndex * 2) + (enemy.elite ? 4 : 0), life: flight + 0.5, landed: false, hit: false });
           sound('tomatoThrow');
         } else if (distance < 96 && depth < 50 && player.z > -36 && canBeHit()) {
-          damagePlayer((levelIndex === 0 ? (enemy.type === 'mozzarella' ? 10 : 7) : (enemy.type === 'mozzarella' ? 15 : 10 + levelIndex)) + (enemy.elite ? 3 : 0), enemy.x);
+          damagePlayer((enemy.type === 'mozzarella' ? 14 + levelIndex*4 : 10 + levelIndex*3) + (enemy.elite ? 3 : 0), enemy.x);
           const impactSound = { garlic: 'garlicStab', tomato: 'tomatoBump', mozzarella: 'heavy', pepper: 'pepperRush' }[enemy.type];
           sound(impactSound || 'enemyRush');
         }
@@ -2155,11 +2174,12 @@
       if (enemy.stateTime <= 0) enemy.state = 'idle';
     }
     if (enemy.state === 'idle') {
+      if (distance < 520 && depth > 8) enemy.y = clamp(enemy.y + Math.sign(player.y-enemy.y) * Math.min(depth-8,(30+levelIndex*9)*dt),382,477);
       enemy.timer -= dt;
-      if (enemy.timer <= 0 && distance < 400) {
+      if (enemy.timer <= 0 && distance < 560) {
         const speed = (enemy.type === 'pepper' ? 150 : enemy.type === 'mozzarella' ? 68 : 94) * (0.98 + levelIndex * 0.04);
         enemy.vx = Math.sign(dx) * speed * (enemy.elite ? enemy.enraged ? 1.34 : 1.12 : 1);
-        enemy.timer = enemy.type === 'pepper' ? 0.32 : 0.42;
+        enemy.timer = enemy.type === 'pepper' ? 0.22 : 0.3;
       }
       if (enemy.attackCooldown <= 0 && depth < 64 && ((enemy.type === 'tomato' && distance < 390 && distance > 100) || distance < 76)) {
         enemy.state = 'tell';
@@ -2167,7 +2187,7 @@
         const tell = (enemy.type === 'pepper' ? 0.3 : enemy.type === 'mozzarella' ? 0.72 : 0.52) + (levelIndex === 0 ? 0.18 : 0);
         enemy.stateTime = tell * (enemy.elite ? enemy.enraged ? 0.64 : 0.82 : 1);
         const cooldown = enemy.type === 'tomato' ? 2.8 : enemy.type === 'pepper' ? 1.8 : 2.25;
-        enemy.attackCooldown = cooldown * (enemy.elite ? enemy.enraged ? 0.58 : 0.82 : 1);
+        enemy.attackCooldown = cooldown * (1-levelIndex*.09) * (enemy.elite ? enemy.enraged ? 0.68 : 0.86 : 1);
       }
     }
     enemy.x += enemy.vx * dt;
@@ -2176,7 +2196,7 @@
       enemy.x = clamp(enemy.x + enemy.knockback * dt, 42, worldWidth - 42);
       enemy.knockback *= Math.pow(0.018, dt);
     } else enemy.knockback = 0;
-    advanceGait(enemy, enemy.state === 'idle' ? enemy.x-gaitStartX : 0, 0, dt, enemy.type);
+    advanceGait(enemy, enemy.state === 'idle' ? enemy.x-gaitStartX : 0, enemy.state === 'idle' ? enemy.y-gaitStartY : 0, dt, enemy.type);
     if (distance < 38 && depth < 32 && canBeHit() && enemy.state === 'idle') damagePlayer(levelIndex === 0 ? 3 : 5, enemy.x);
   }
 
@@ -2195,10 +2215,11 @@
       haptic('heavy');
     }
     boss.phaseFlash = Math.max(0, boss.phaseFlash - dt);
-    boss.timer -= dt;
+    boss.sweepFlash = Math.max(0,(boss.sweepFlash||0)-dt);
+    boss.timer -= dt * (1 + levelIndex * .10);
     boss.stun = Math.max(0, boss.stun - dt);
     if (boss.state === 'idle' && boss.timer <= 0) {
-      boss.chainRemaining = boss.phase === 3 && Math.random() < 0.42 ? 1 : 0;
+      boss.chainRemaining = boss.phase === 3 ? (levelIndex >= 3 ? 2 : 1) : boss.phase === 2 && levelIndex >= 2 ? 1 : 0;
       warnBossAttack((boss.phase === 1 ? 1.05 : boss.phase === 2 ? 0.72 : 0.48) + (levelIndex === 0 ? 0.24 : 0), false, boss.chainRemaining > 0);
     } else if (boss.state === 'tell' && boss.timer <= 0) {
       boss.state = 'attack';
@@ -2229,6 +2250,7 @@
     boss.timer = delay;
     boss.hitDone = false;
     boss.aimX = player.x; boss.aimY = player.y;
+    if (Math.abs(player.x-boss.x)<180) { toast = 'ЗАМАХ · ПРЫГАЙ ИЛИ ОТОЙДИ'; toastTime = delay; }
     toast = `${bossWarning()}${comboStart ? ' · СВЯЗКА' : ''}`;
     toastTime = delay;
     const dodgeHint = 'Следи за ингредиентами. Прыгай через низкие снаряды, уходи с линии нити и с места падения.';
@@ -2257,14 +2279,17 @@
   }
 
   function bossWeapon(kind, motion, targetX, targetY, damage, options = {}) {
-    const startX = boss.x - 52, startY = boss.y;
-    const h = { bossWeapon: true, type: kind, motion, startX, startY, targetX: clamp(targetX, 42, worldWidth - 42), targetY: clamp(targetY, 382, 477), x: startX, y: startY, height: -42, age: 0, duration: .85, delay: 0, linger: 0, radius: 23, depth: 30, jumpClear: 54, hit: false, damage: Math.round(damage * (levelIndex === 0 ? .85 : 1)), seed: Math.random() * 10, ...options };
+    const startX = boss.x - 18, startY = boss.y;
+    const h = { bossWeapon: true, type: kind, motion, startX, startY, targetX: clamp(targetX, 42, worldWidth - 42), targetY: clamp(targetY, 382, 477), x: startX, y: startY, height: -42, age: 0, duration: .85, delay: 0, linger: 0, radius: 23, depth: 30, jumpClear: 54, hit: false, damage: Math.round(damage * (1 + levelIndex * .19)), seed: Math.random() * 10, ...options };
     h.life = h.duration + h.delay + h.linger;
     hazards.push(h); return h;
   }
 
   function performBossAttack() {
     sound('bossAttack');
+    // The same windup also commits a close-range sweep: face-tanking is unsafe.
+    boss.sweepFlash = .35;
+    if (Math.abs(player.x-boss.x)<155 && Math.abs(player.y-boss.y)<65 && player.z>-65 && canBeHit()) damagePlayer(18+levelIndex*5,boss.x);
     const key = levels[levelIndex].key;
     if (key === 'pizzaSlice' || key === 'spaghettiMonster') sound(boss.attack === 1 ? 'whip' : 'tomatoThrow');
     if (key === 'nuggetBrute') sound('heavy');
@@ -2465,12 +2490,70 @@
     sound('kick'); haptic(connected ? 'medium' : 'light');
   }
 
-  function updateFinale() {
+  function performMiniAttack(enemy) {
+    enemy.vx = 0;
+    for(let i=0;i<2;i++) hazards.push({bossWeapon:true,type:'flame',motion:'line',startX:enemy.x-18,startY:452,targetX:Math.max(42,player.x-200),targetY:452,x:enemy.x-18,y:452,height:-42,age:0,duration:1.05,delay:i*.32,linger:0,radius:30,depth:46,jumpClear:58,hit:false,damage:23,seed:i,life:1.05+i*.32});
+    toast='ПЕРЕЦ · ДВОЙНАЯ ОГНЕННАЯ ВОЛНА';toastTime=1.2;sound('bossAttack');
+  }
+
+  function updateFinaleDangers(dt) {
+    if (bossSpawned) return;
+    for(const o of finaleObstacles) {
+      o.timer-=dt;
+      if(o.timer<=0){
+        if(o.state==='low'){o.state='warn';o.timer=.85;if(Math.abs(player.x-o.x)<260){sound('bossTell');toast='ПЛИТА РАСКАЛЯЕТСЯ · ОТОЙДИ';toastTime=.85;}}
+        else if(o.state==='warn'){o.state='surge';o.timer=1.05;sound('heavy');}
+        else {o.state='low';o.timer=1.7+Math.random()*1.6;}
+      }
+      // A tall flare is unsafe even at the apex of a jump. Wait for it to subside.
+      if(o.state==='surge' && Math.abs(player.x-o.x)<62 && player.z>-175 && canBeHit()) damagePlayer(29,o.x);
+    }
+    for(const barrier of finaleBarriers){
+      barrier.cycle=(barrier.cycle+dt)%4.2;
+      if(barrier.type==='steam' && barrier.cycle>=1.1 && barrier.cycle<2.45 && Math.abs(player.x-barrier.x)<43 && player.z>-190 && canBeHit()) damagePlayer(26,barrier.x);
+      if(barrier.type==='skewer' && Math.abs(player.x-barrier.x)<38 && player.z>-64 && canBeHit()) damagePlayer(21,barrier.x);
+    }
+  }
+
+  function drawSurgeFlame(x,y,width,height) {
+    ctx.save();ctx.translate(x,y);
+    const glow=ctx.createRadialGradient(0,-height*.35,4,0,-height*.35,height*.8);
+    glow.addColorStop(0,'#ff9b353f');glow.addColorStop(1,'#ff4c0000');ctx.fillStyle=glow;ctx.fillRect(-width,-height*1.4,width*2,height*1.6);
+    for(let i=0;i<7;i++){
+      const sway=Math.sin(time*13+i*2.1)*width*.045;
+      const fx=(i-3)*width*.12,h=height*(.65+.25*Math.sin(i*2+time*9));
+      const g=ctx.createLinearGradient(fx,0,fx,-h);g.addColorStop(0,'#fff1a5');g.addColorStop(.35,'#ffb436');g.addColorStop(1,'#ef3e16aa');ctx.fillStyle=g;
+      ctx.beginPath();ctx.moveTo(fx-width*.14,0);ctx.bezierCurveTo(fx-width*.2,-h*.4,fx+sway+width*.13,-h*.55,fx+sway,-h);ctx.bezierCurveTo(fx+sway+width*.02,-h*.5,fx+width*.23,-h*.25,fx+width*.14,0);ctx.closePath();ctx.fill();
+    }ctx.restore();
+  }
+
+  function drawFinaleBarriers(){
+    for(const b of finaleBarriers){
+      ctx.save();ctx.translate(b.x,459);
+      if(b.type==='skewer'){
+        ctx.fillStyle='#0006';ctx.beginPath();ctx.ellipse(0,1,47,9,0,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#6a3631';ctx.lineWidth=9;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-36,-12);ctx.lineTo(35,-12);ctx.stroke();
+        const metal=ctx.createLinearGradient(-8,0,8,0);metal.addColorStop(0,'#5a4542');metal.addColorStop(.5,'#e1c6a0');metal.addColorStop(1,'#614037');ctx.fillStyle=metal;
+        for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(i*25-5,-12);ctx.lineTo(i*25,-64);ctx.lineTo(i*25+5,-12);ctx.closePath();ctx.fill();}
+        text('ПРЫЖОК',0,-83,8,'#ffd3a0','center',900);
+      } else {
+        ctx.strokeStyle='#765346';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(-29,0);ctx.lineTo(29,0);ctx.stroke();
+        ctx.strokeStyle='#e7b77f';ctx.lineWidth=3;for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(i*10,-5);ctx.lineTo(i*10+4,4);ctx.stroke();}
+        if(b.cycle<1.1){text('ПАР · СТОП',0,-85,10,'#ffe0a5','center',900);}
+        if(b.cycle>=1.1 && b.cycle<2.45){
+          for(let i=0;i<11;i++){const t=(time*1.3+i/11)%1;ctx.globalAlpha=(1-t)*.6;ctx.fillStyle=i%2?'#fff2d5':'#d4c5b5';ctx.beginPath();ctx.ellipse(Math.sin(i*3+time)*12*(1+t),-15-t*170,12+t*20,15+t*25,0,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+        }
+      }ctx.restore();
+    }
+  }
+
+  function updateFinale(dt) {
+    updateFinaleDangers(dt);
     for (const obstacle of finaleObstacles) {
       if (!obstacle.cleared && player.x >= obstacle.x - 8) {
         obstacle.cleared = true;
         if (player.z > -54) {
-          damagePlayer(14, obstacle.x);
+          damagePlayer(24, obstacle.x);
           player.x = Math.max(42, player.x - 48);
           toast = 'ПРЫГАЙ ЧЕРЕЗ ОГНЕННЫЕ ПЛИТЫ';
           toastTime = 1.2;
@@ -2478,18 +2561,24 @@
           sound('pickup');
           burst(obstacle.x, player.y - 28, '#ffbe67', 10);
         }
-        gameState.checkpoint = { stageIndex: levelIndex, finale: true, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, kills: 0 };
+        gameState.checkpoint = { stageIndex: levelIndex, finale: true, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, miniDefeated: finaleMiniDefeated, miniHp: enemies.find(e=>e.miniBoss&&e.alive)?.hp || finaleMiniSavedHp, kills: 0 };
         saveProgress();
       }
     }
-    if (!bossSpawned && player.x > 3250) {
+    if (!finaleMiniSpawned && player.x > 3070) {
+      const mini=makeEnemy(3290,'pepper',true);
+      Object.assign(mini,{miniBoss:true,y:452,hp:finaleMiniSavedHp,hpTrail:finaleMiniSavedHp,maxHp:900,attackCooldown:1.5,timer:.2});
+      enemies.push(mini); finaleMiniSpawned=true; fightGate=3330;
+      toast='ПЕРЕЦ-ПОДЖИГАТЕЛЬ · СТРАЖ ГРИЛЯ';toastTime=2.5; sound('bossTell');
+    }
+    if (!bossSpawned && finaleMiniDefeated && player.x > 3470) {
       const saved = gameState.checkpoint;
-      const hp = Math.min(1600, saved?.bossHp ?? 1600);
-      boss = { healMask: saved?.bossHealMask || 0, healCollected: saved?.bossHealMask || 0, x: 3760, y: 425, hp, hpTrail: hp, maxHp: 1600, alive: true, state: 'idle', timer: 1.25, stun: 0, phase: hp / 1600 > .55 ? 1 : hp / 1600 > .24 ? 2 : 3, phaseFlash: 0, attack: 1, lastAttack: 0, chainRemaining: 0, hitDone: false };
+      const hp = Math.min(bossHealth(4), saved?.bossHp ?? bossHealth(4));
+      boss = { healMask: saved?.bossHealMask || 0, healCollected: saved?.bossHealMask || 0, x: 3760, y: 425, hp, hpTrail: hp, maxHp: bossHealth(4), alive: true, state: 'idle', timer: 1.25, stun: 0, phase: hp / bossHealth(4) > .55 ? 1 : hp / bossHealth(4) > .24 ? 2 : 3, phaseFlash: 0, attack: 1, lastAttack: 0, chainRemaining: 0, hitDone: false };
       bossSpawned = true; bossIntro = 2.35;
       toast = 'BURGER TOO HUNGRY · ПОСЛЕДНИЙ БОСС'; toastTime = 2.35;
       announce(toast); sound('bossAttack');
-      gameState.checkpoint = { stageIndex: levelIndex, finale: true, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, kills: 0, bossHp: hp, bossHealMask: boss.healCollected };
+      gameState.checkpoint = { stageIndex: levelIndex, finale: true, playerX: player.x, hp: player.hp, obstacles: finaleObstacles.filter(item => item.cleared).length, miniDefeated: finaleMiniDefeated, miniHp: enemies.find(e=>e.miniBoss&&e.alive)?.hp || finaleMiniSavedHp, kills: 0, bossHp: hp, bossHealMask: boss.healCollected };
       saveProgress();
     }
   }
@@ -2644,6 +2733,10 @@
     if (boss?.alive) actors.push({ y: boss.y, draw: drawBoss });
     actors.push({ y: player.y, draw: drawPlayer });
     actors.sort((a, b) => a.y - b.y).forEach(actor => actor.draw());
+    if(boss?.alive && (boss.state==='tell' || boss.sweepFlash>0)) {
+      ctx.save();ctx.globalAlpha=boss.sweepFlash>0?.85:.45;ctx.strokeStyle=boss.sweepFlash>0?'#fff1c2':'#ffad5c';ctx.lineWidth=boss.sweepFlash>0?12:4;
+      ctx.beginPath();ctx.ellipse(boss.x-45,boss.y-30,102,45,-.15,Math.PI*.5,Math.PI*1.5);ctx.stroke();ctx.restore();
+    }
     drawParticles();
     drawDamageNumbers();
     ctx.restore();
@@ -2808,8 +2901,11 @@
   }
 
   function drawFinaleObstacles() {
+    drawFinaleBarriers();
     for (const obstacle of finaleObstacles) {
       ctx.save(); ctx.translate(obstacle.x, 459);
+      if (obstacle.state==='warn') { text('ПЛАМЯ!',0,-130,12,'#ffe3a0','center',950); }
+      if (obstacle.state==='surge') drawSurgeFlame(0,0,110,160);
       ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(0, 4, 55, 9, 0, 0, Math.PI * 2); ctx.fill();
       if (art.hotplate.complete && art.hotplate.naturalWidth) {
         const width = 122, height = width * art.hotplate.naturalHeight / art.hotplate.naturalWidth;
@@ -3175,6 +3271,7 @@
     const hpWidth = 50 * enemy.hp / enemy.maxHp;
     const hpTrailWidth = 50 * enemy.hpTrail / enemy.maxHp;
     if (hpTrailWidth > hpWidth + 0.5) rounded(barX, barY, hpTrailWidth * indicatorScale, barHeight, 2, '#e5a34f');
+    if (enemy.miniBoss) text('ПЕРЕЦ-ПОДЖИГАТЕЛЬ',x,barY-12,9,'#ffd17b','center',900);
     rounded(barX, barY, hpWidth * indicatorScale, barHeight, 2, enemy.elite ? enemy.enraged ? '#ff684c' : '#ffd17b' : enemy.type === 'tomato' ? '#f2654b' : '#e6b66f');
   }
 
