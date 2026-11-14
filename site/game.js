@@ -1599,7 +1599,14 @@
     }
     if (running && (key === 'escape' || key === 'p')) { event.preventDefault(); pauseGame(); return; }
     const interactiveTarget = event.target instanceof Element ? event.target.closest('button,a[href],input,select,textarea,summary,[contenteditable="true"]') : null;
-    if (interactiveTarget && (interactiveTarget.matches('input,select,textarea,[contenteditable="true"]') || ['enter', ' '].includes(key))) return;
+    if (interactiveTarget?.matches('input,select,textarea,[contenteditable="true"]')) return;
+    if (running && event.code === 'Space') {
+      event.preventDefault();
+      if (!event.repeat) jump();
+      canvas.focus({ preventScroll: true });
+      return;
+    }
+    if (interactiveTarget && ['enter', ' '].includes(key)) return;
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) event.preventDefault();
     if (key === 'm' && !event.repeat) toggleMusic();
     if ((key === 'j' || key === 'z') && !event.repeat) attack();
