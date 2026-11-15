@@ -1912,8 +1912,8 @@
         player.x += (right ? 1 : -1) * 222 * dt * (player.slowTime > 0 ? .62 : 1);
         player.face = right ? 1 : -1;
       }
-      if (up !== down && !(levels[levelIndex].finale && !bossSpawned)) player.y += (down ? 1 : -1) * 128 * dt * (player.slowTime > 0 ? .62 : 1);
-      if (levels[levelIndex].finale && !bossSpawned) player.y = 452;
+      if (up !== down && !(levels[levelIndex].finale && !bossSpawned && !enemies.some(e=>e.miniBoss&&e.alive))) player.y += (down ? 1 : -1) * 128 * dt * (player.slowTime > 0 ? .62 : 1);
+      if (levels[levelIndex].finale && !bossSpawned && !enemies.some(e=>e.miniBoss&&e.alive)) player.y = 452;
     }
     const livingEnemies = enemies.some(enemy => enemy.alive);
     const maxX = boss?.alive ? boss.x - 48 : livingEnemies && fightGate > 0 ? fightGate : worldWidth - 42;
@@ -2133,6 +2133,11 @@
 
   function updateEnemy(enemy, dt) {
     if (!enemy.alive) return;
+    if (enemy.miniBoss && enemy.state === 'recover') {
+      enemy.stateTime -= dt; enemy.vx = 0;
+      if (enemy.stateTime <= 0) enemy.state = 'idle';
+      return;
+    }
     const gaitStartX = enemy.x, gaitStartY = enemy.y;
     enemy.spawn = Math.max(0, enemy.spawn - dt);
     enemy.hit = Math.max(0, enemy.hit - dt);
@@ -2170,7 +2175,7 @@
           const flight = 0.7;
           hazards.push({ type: 'tomato', x: enemy.x, y: enemy.y - 76, startX: enemy.x, startY: enemy.y - 76, targetX: player.x, targetY: player.y - 8, flight, elapsed: 0, damage: (levelIndex === 0 ? 8 : 11 + levelIndex * 2) + (enemy.elite ? 4 : 0), life: flight + 0.5, landed: false, hit: false });
           sound('tomatoThrow');
-        } else if (distance < 96 && depth < 50 && player.z > -36 && canBeHit()) {
+        } else if (!enemy.miniBoss && distance < 96 && depth < 50 && player.z > -36 && canBeHit()) {
           damagePlayer((enemy.type === 'mozzarella' ? 14 + levelIndex*4 : 10 + levelIndex*3) + (enemy.elite ? 3 : 0), enemy.x);
           const impactSound = { garlic: 'garlicStab', tomato: 'tomatoBump', mozzarella: 'heavy', pepper: 'pepperRush' }[enemy.type];
           sound(impactSound || 'enemyRush');
@@ -2178,7 +2183,7 @@
       }
     } else if (enemy.state === 'attack') {
       enemy.stateTime -= dt;
-      if (enemy.stateTime <= 0) enemy.state = 'idle';
+      if (enemy.stateTime <= 0) { enemy.state = enemy.miniBoss ? 'recover' : 'idle'; if (enemy.miniBoss) enemy.stateTime = 2.2; }
     }
     if (enemy.state === 'idle') {
       if (distance < 520 && depth > 8) enemy.y = clamp(enemy.y + Math.sign(player.y-enemy.y) * Math.min(depth-8,(30+levelIndex*9)*dt),382,477);
@@ -2192,9 +2197,9 @@
         enemy.state = 'tell';
         sound('enemyTell');
         const tell = (enemy.type === 'pepper' ? 0.3 : enemy.type === 'mozzarella' ? 0.72 : 0.52) + (levelIndex === 0 ? 0.18 : 0);
-        enemy.stateTime = tell * (enemy.elite ? enemy.enraged ? 0.64 : 0.82 : 1);
+        enemy.stateTime = enemy.miniBoss ? 1.1 : tell * (enemy.elite ? enemy.enraged ? 0.64 : 0.82 : 1);
         const cooldown = enemy.type === 'tomato' ? 2.8 : enemy.type === 'pepper' ? 1.8 : 2.25;
-        enemy.attackCooldown = cooldown * (1-levelIndex*.09) * (enemy.elite ? enemy.enraged ? 0.68 : 0.86 : 1);
+        enemy.attackCooldown = enemy.miniBoss ? 2.8 : cooldown * (1-levelIndex*.09) * (enemy.elite ? enemy.enraged ? 0.68 : 0.86 : 1);
       }
     }
     enemy.x += enemy.vx * dt;
@@ -2204,7 +2209,7 @@
       enemy.knockback *= Math.pow(0.018, dt);
     } else enemy.knockback = 0;
     advanceGait(enemy, enemy.state === 'idle' ? enemy.x-gaitStartX : 0, enemy.state === 'idle' ? enemy.y-gaitStartY : 0, dt, enemy.type);
-    if (distance < 38 && depth < 32 && canBeHit() && enemy.state === 'idle') damagePlayer(levelIndex === 0 ? 3 : 5, enemy.x);
+    if (!enemy.miniBoss && distance < 38 && depth < 32 && canBeHit() && enemy.state === 'idle') damagePlayer(levelIndex === 0 ? 3 : 5, enemy.x);
   }
 
   function updateBoss(dt) {
@@ -2499,12 +2504,12 @@
 
   function performMiniAttack(enemy) {
     enemy.vx = 0;
-    for(let i=0;i<2;i++) hazards.push({bossWeapon:true,type:'flame',motion:'line',startX:enemy.x-18,startY:452,targetX:Math.max(42,player.x-200),targetY:452,x:enemy.x-18,y:452,height:-42,age:0,duration:1.05,delay:i*.32,linger:0,radius:30,depth:46,jumpClear:58,hit:false,damage:23,seed:i,life:1.05+i*.32});
-    toast='ПЕРЕЦ · ДВОЙНАЯ ОГНЕННАЯ ВОЛНА';toastTime=1.2;sound('bossAttack');
+    for(let i=0;i<1;i++) hazards.push({bossWeapon:true,type:'flame',motion:'line',startX:enemy.x-18,startY:452,targetX:Math.max(42,player.x-200),targetY:452,x:enemy.x-18,y:452,height:-42,age:0,duration:1.35,delay:i*.32,linger:0,radius:24,depth:23,jumpClear:40,hit:false,damage:15,seed:i,life:1.35+i*.32});
+    toast='ПЕРЕЦ · ПРЫГАЙ ИЛИ УЙДИ С ЛИНИИ';toastTime=1.2;sound('bossAttack');
   }
 
   function updateFinaleDangers(dt) {
-    if (bossSpawned) return;
+    if (bossSpawned || enemies.some(e=>e.miniBoss&&e.alive)) return;
     for(const o of finaleObstacles) {
       o.timer-=dt;
       if(o.timer<=0){
@@ -2908,11 +2913,11 @@
   }
 
   function drawFinaleObstacles() {
-    drawFinaleBarriers();
+    if (!enemies.some(e=>e.miniBoss&&e.alive)) drawFinaleBarriers();
     for (const obstacle of finaleObstacles) {
       ctx.save(); ctx.translate(obstacle.x, 459);
-      if (obstacle.state==='warn') { text('ПЛАМЯ!',0,-130,12,'#ffe3a0','center',950); }
-      if (obstacle.state==='surge') drawSurgeFlame(0,0,110,160);
+      if (!enemies.some(e=>e.miniBoss&&e.alive) && obstacle.state==='warn') { text('ПЛАМЯ!',0,-130,12,'#ffe3a0','center',950); }
+      if (!enemies.some(e=>e.miniBoss&&e.alive) && obstacle.state==='surge') drawSurgeFlame(0,0,110,160);
       ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(0, 4, 55, 9, 0, 0, Math.PI * 2); ctx.fill();
       if (art.hotplate.complete && art.hotplate.naturalWidth) {
         const width = 122, height = width * art.hotplate.naturalHeight / art.hotplate.naturalWidth;
