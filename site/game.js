@@ -57,7 +57,7 @@
   window.addEventListener('resize', updateCompactHudScale);
   const compactHudResizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(updateCompactHudScale) : null;
   compactHudResizeObserver?.observe(canvas);
-  const telegramApp = window.Telegram?.WebApp;
+  const telegramApp = window.Telegram?.WebApp?.initData ? window.Telegram.WebApp : null;
   const desktopControlHint = 'WASD / стрелки — движение · Space — прыжок · J / Z — удар рукой<br>После FRY KING: V — нога · после NUGGET BRUTE: L — хлыст<br>Перед финалом L — огненный кулак · P / Esc — пауза<br>Геймпад: стик · A прыжок · B рука · RB нога · LB особый удар';
   const touchControlHint = 'Слева — движение · справа — прыжок и доступные удары<br>Нога откроется после первого босса, хлыст — после третьего';
   const leftHandedTouchControlHint = 'Справа — движение · слева — прыжок и доступные удары<br>Нога откроется после первого босса, хлыст — после третьего';
@@ -149,7 +149,18 @@
   }
   fullscreenButton?.addEventListener('click', togglePlayFullscreen);
   document.addEventListener('fullscreenchange', syncFullscreenButton);
-  window.addEventListener('orientationchange', syncTelegramOrientationLock);
+  function syncMobileViewport() {
+    document.documentElement.style.setProperty('--play-height',(window.visualViewport?.height || window.innerHeight)+'px');
+    if(window.matchMedia('(orientation: landscape)').matches && compactControlsQuery?.matches) {
+      fullscreenAutoRequested=false;requestPlayFullscreen();
+    }
+    updateCompactHudScale();
+  }
+  window.addEventListener('orientationchange',()=>setTimeout(syncMobileViewport,180));
+  window.addEventListener('resize',syncMobileViewport);
+  window.visualViewport?.addEventListener('resize',syncMobileViewport);
+  document.addEventListener('pointerdown',()=>{if(compactControlsQuery?.matches){fullscreenAutoRequested=false;requestPlayFullscreen();}},{passive:true});
+  document.addEventListener('gesturestart',event=>event.preventDefault(),{passive:false});
   if (telegramApp) {
     telegramApp.BackButton?.onClick?.(() => { if (running) pauseGame(); });
     telegramApp.onEvent?.('fullscreenChanged', handleTelegramFullscreenChange);
@@ -258,10 +269,24 @@
   }
 
   function requestArt(image) {
-    if (image && !image.src && image.assetSource) image.src = image.assetSource;
+    if (image && !image.src && image.assetSource) {
+      image.onerror = () => { image.assetRetries = (image.assetRetries || 0) + 1;
+        if(image.assetRetries <= 3) setTimeout(()=>{image.src=image.assetSource+'?retry='+image.assetRetries;},600*image.assetRetries);
+      };
+      image.src = image.assetSource;
+    }
     return image;
   }
 
+  function artReady(images) { return images.every(image => image?.complete && image.naturalWidth > 0); }
+  function introArt() { return [art.backgrounds[0],art.chef,art.chefPour,art.chefMiss,art.platedSteak,art.hero,art.heroRun]; }
+  function drawAssetLoading(images) {
+    ctx.fillStyle='#171113';ctx.fillRect(0,0,W,H);
+    const loaded=images.filter(image=>image?.complete&&image.naturalWidth>0).length;
+    text('ЗАГРУЖАЕМ КУХНЮ',W/2,H/2-15,22,'#ffd49b','center',900);
+    text(loaded+' / '+images.length+' · Подожди немного',W/2,H/2+22,13,'#e1c3ac','center',700);
+    if(images.some(image=>image.assetRetries>3)) text('Не удалось загрузить картинки. Проверь связь и открой игру заново.',W/2,H/2+56,11,'#ff9b83','center',700);
+  }
   function preloadStageArt(index) {
     const stage = levels[index];
     requestArt(art.backgrounds[index]);
@@ -1166,6 +1191,10 @@
 
   function cutsceneLoop(now) {
     if (!cutscene || cutscene.pausedAt) return;
+    if (!cutscene.mode && !artReady(introArt())) {
+      if (!cutscene.awaitingStart) cutscene.started = now;
+      drawAssetLoading(introArt());scheduleCutsceneFrame();return;
+    }
     if (cutsceneSkipPressed()) { skipCutscene(); return; }
     if (cutscene.awaitingStart) {
       drawCutscene(0);
@@ -3821,6 +3850,8 @@
 
   function loop(now) {
     if (!running) return;
+    const stageImages=[art.backgrounds[levelIndex],art.hero,art.heroJump,...Object.values(art.npcs),...(levels[levelIndex].finale?[art.burger,art.hotplate]:art.bosses[levels[levelIndex].key]||[])];
+    if(!artReady(stageImages)){lastTime=now;drawAssetLoading(stageImages);scheduleGameFrame();return;}
     const dt = Math.min(0.033, (now - lastTime) / 1000 || 0);
     lastTime = now;
     if (hitStop > 0) hitStop = Math.max(0, hitStop - dt);

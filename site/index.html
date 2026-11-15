@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#101113">
   <meta name="description" content="TOO HUNGRY — sauce-soaked 2D beat 'em up campaign by XARIZMA19.">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -36,7 +36,7 @@
     .mixer-row output { color:#d4a77e; text-align:right; font-variant-numeric:tabular-nums; }
     .subtitle { font-size:10px; color:#a19a97; letter-spacing:.18em; text-transform:uppercase; }
     .stage { position:relative; overflow:hidden; border:1px solid #554143; border-radius:10px; background:#181719; box-shadow:0 26px 100px #000c,0 0 55px #e23b3010; }
-    canvas { display:block; width:100%; aspect-ratio:16 / 9; touch-action:manipulation; touch-action:pinch-zoom; }
+    canvas { display:block; width:100%; aspect-ratio:16 / 9; touch-action:none; }
     .overlay { position:absolute; inset:0; display:grid; place-items:center; padding:20px; background:radial-gradient(ellipse at 50% 45%,#1611128a 0,#09090be8 74%),linear-gradient(110deg,#09090bf2,#181214b8); text-align:center; animation:overlay-arrive .24s ease-out both; }
     .panel { position:relative; width:min(540px,100%); padding:31px 32px 27px; border:1px solid #7b3a38; border-radius:5px; background:linear-gradient(145deg,#201b1bfa,#111113f5 74%); box-shadow:0 24px 80px #000c,0 0 38px #f0442b15; animation:panel-arrive .34s cubic-bezier(.2,.8,.2,1) both; }
     .panel::before,.panel::after { content:""; position:absolute; top:12px; bottom:12px; width:2px; background:linear-gradient(transparent,#ef443b,transparent); opacity:.78; }
@@ -142,6 +142,14 @@
       .panel.is-level-menu .desc { font-size:11px; line-height:1.35; margin:0 auto 11px; }
       .panel.is-level-menu .campaign-route { margin-bottom:10px; }
     }
+    @media (pointer:coarse) and (orientation:landscape) {
+      html,body { width:100%;height:var(--play-height,100dvh);min-height:0;overflow:hidden;overscroll-behavior:none;touch-action:none; }
+      .frame { width:100vw;height:100%;padding:0;display:grid;place-items:center; }
+      .topline,.footer { display:none; }
+      .stage { width:min(100vw,calc(var(--play-height,100dvh) * 16 / 9));max-height:100%;border:0;border-radius:0; }
+      .mobile-controls { bottom:max(12px,env(safe-area-inset-bottom));inset-inline:max(12px,env(safe-area-inset-left)); }
+      .mobile-controls button { min-width:44px;min-height:44px; }
+    }
   </style>
 </head>
 <body>
@@ -179,7 +187,7 @@
   </main>
   <div class="rotate-hint" role="status" aria-live="polite"><span class="rotate-mark" aria-hidden="true">↻</span><span class="rotate-copy"><strong>ПОВЕРНИ ТЕЛЕФОН</strong><small>АРЕНА ШИРЕ В АЛЬБОМНОМ РЕЖИМЕ</small></span></div>
 <script src="telegram-web-app.js"></script>
-<script src="game.js?v=194"></script>
+<script src="game.js?v=195"></script>
 <script>
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
