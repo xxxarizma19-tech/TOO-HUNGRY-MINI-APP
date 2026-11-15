@@ -60,8 +60,8 @@
   compactHudResizeObserver?.observe(canvas);
   const telegramApp = window.Telegram?.WebApp?.initData ? window.Telegram.WebApp : null;
   const desktopControlHint = 'WASD / стрелки — движение · Space — прыжок · J / Z — удар рукой<br>После FRY KING: V — нога · после NUGGET BRUTE: L — хлыст<br>Перед финалом L — огненный кулак · P / Esc — пауза<br>Геймпад: стик · A прыжок · B рука · RB нога · LB особый удар';
-  const touchControlHint = 'Слева — движение · справа — прыжок и доступные удары<br>Нога откроется после первого босса, хлыст — после третьего';
-  const leftHandedTouchControlHint = 'Справа — движение · слева — прыжок и доступные удары<br>Нога откроется после первого босса, хлыст — после третьего';
+  const touchControlHint = 'Слева — стик движения · справа — прыжок и доступные удары<br>Нога откроется после первого босса, хлыст — после третьего';
+  const leftHandedTouchControlHint = 'Справа — стик движения · слева — прыжок и доступные удары<br>Нога откроется после первого босса, хлыст — после третьего';
   let leftHandedControls = false;
   try { leftHandedControls = localStorage.getItem('tooHungryLeftHanded') === 'true'; } catch { /* The layout preference can stay session-only if storage is blocked. */ }
   function syncHandednessToggle() {
@@ -219,6 +219,22 @@
 
   const keys = new Set();
   const touch = { left: false, right: false, up: false, down: false };
+  let stickPointer=null, stickX=0, stickY=0;
+  const stick=document.querySelector('#moveStick'),stickKnob=stick?.querySelector('.stick-knob');
+  function resetStick(){stickPointer=null;stickX=stickY=0;Object.keys(touch).forEach(k=>touch[k]=false);if(stickKnob)stickKnob.style.transform='translate(-50%,-50%)';}
+  function moveStick(event){
+    if(event.pointerId!==stickPointer)return;
+    const box=stick.getBoundingClientRect(),radius=box.width*.36;
+    let x=(event.clientX-box.left-box.width/2)/radius,y=(event.clientY-box.top-box.height/2)/radius;
+    const distance=Math.hypot(x,y);if(distance>1){x/=distance;y/=distance;}
+    stickX=Math.abs(x)<.15?0:x;stickY=Math.abs(y)<.15?0:y;
+    touch.left=stickX<0;touch.right=stickX>0;touch.up=stickY<0;touch.down=stickY>0;
+    stickKnob.style.transform='translate(calc(-50% + '+x*radius+'px),calc(-50% + '+y*radius+'px))';event.preventDefault();
+  }
+  stick?.addEventListener('pointerdown',event=>{if(stickPointer!==null)return;stickPointer=event.pointerId;stick.setPointerCapture(event.pointerId);moveStick(event)});
+  stick?.addEventListener('pointermove',moveStick);
+  ['pointerup','pointercancel','lostpointercapture'].forEach(type=>stick?.addEventListener(type,event=>{if(event.pointerId===stickPointer)resetStick()}));
+  window.addEventListener('blur',resetStick);
   const touchAttackTimers = new Map();
   let gamepadId = null;
   let gamepadPressed = new Set();
@@ -1952,10 +1968,10 @@
     if (player.dash > 0) player.dash = Math.max(0, player.dash - dt);
     else {
       if (left !== right) {
-        player.x += (right ? 1 : -1) * 222 * dt * (player.slowTime > 0 ? .62 : 1);
+        player.x += (right ? 1 : -1) * (stickPointer!==null?Math.abs(stickX):1) * 222 * dt * (player.slowTime > 0 ? .62 : 1);
         player.face = right ? 1 : -1;
       }
-      if (up !== down && !(levels[levelIndex].finale && !bossSpawned && !enemies.some(e=>e.miniBoss&&e.alive))) player.y += (down ? 1 : -1) * 128 * dt * (player.slowTime > 0 ? .62 : 1);
+      if (up !== down && !(levels[levelIndex].finale && !bossSpawned && !enemies.some(e=>e.miniBoss&&e.alive))) player.y += (down ? 1 : -1) * (stickPointer!==null?Math.abs(stickY):1) * 128 * dt * (player.slowTime > 0 ? .62 : 1);
       if (levels[levelIndex].finale && !bossSpawned && !enemies.some(e=>e.miniBoss&&e.alive)) player.y = 452;
     }
     const livingEnemies = enemies.some(enemy => enemy.alive);
@@ -3842,6 +3858,7 @@
   }
 
   function resetGameInput() {
+    resetStick();
     keys.clear(); Object.keys(touch).forEach(direction => { touch[direction] = false; });
     touchAttackTimers.forEach(timer => window.clearInterval(timer)); touchAttackTimers.clear();
   }

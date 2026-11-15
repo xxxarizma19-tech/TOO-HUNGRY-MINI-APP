@@ -150,6 +150,15 @@
       .mobile-controls { bottom:max(12px,env(safe-area-inset-bottom));inset-inline:max(12px,env(safe-area-inset-left)); }
       .mobile-controls button { min-width:44px;min-height:44px; }
     }
+    .move-stick { position:relative;width:104px;height:104px;flex:0 0 104px;pointer-events:auto;touch-action:none;user-select:none;border-radius:50%;border:1px solid #ffc78d60;background:radial-gradient(circle,#21181755,#15111766);box-shadow:inset 0 0 18px #0005; }
+    .stick-knob { position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%);border-radius:50%;border:1px solid #ffd7a7a0;background:radial-gradient(circle at 35% 25%,#b47054dd,#482520df);box-shadow:0 3px 10px #0005;pointer-events:none; }
+    @media (pointer:coarse) and (orientation:landscape) {
+      body {padding:0;}
+      .stage {width:100vw;height:var(--play-height,100dvh);max-height:none;}
+      canvas {width:100%;height:100%;aspect-ratio:auto;}
+      .mobile-controls {inset-inline: max(8px,env(safe-area-inset-left)) max(8px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));}
+      .move-stick {width:96px;height:96px;flex-basis:96px;}
+    }
   </style>
 </head>
 <body>
@@ -179,7 +188,7 @@
         </div>
       </div>
       <div class="mobile-controls" id="mobileControls" role="group" aria-label="Сенсорное управление">
-        <div class="pad" role="group" aria-label="Движение по арене"><button data-hold="left" aria-label="Влево">←</button><button data-hold="right" aria-label="Вправо">→</button><button data-hold="up" aria-label="Вверх по арене">↑</button><button data-hold="down" aria-label="Вниз по арене">↓</button></div>
+        <div class="move-stick" id="moveStick" role="group" aria-label="Стик движения. Потяни в нужную сторону"><span class="stick-knob"></span></div>
         <div class="actions" role="group" aria-label="Атаки и способности"><button class="jump" data-press="jump" aria-label="Прыжок">↑</button><button class="utility" data-press="whip" aria-label="Хлыст">ХЛЫСТ</button><button class="utility" data-press="heavy" aria-label="Тяжёлый удар">ТЯЖ</button><button class="hit" data-press="attack" aria-label="Удар. Удерживайте для серии ударов" title="Удерживай для серии ударов">УДАР</button><button class="dash" data-press="dash" aria-label="Рывок">РЫВОК</button><button class="utility" data-press="kick" aria-label="Удар ногой" title="Удар ногой">НОГА</button></div>
       </div>
     </section>
@@ -191,7 +200,7 @@
 (()=>{
  const status=document.querySelector('#bootStatus');
  let started=false,attempt=0,timeout;
- const sources=['./game.js?v=196','https://cdn.jsdelivr.net/gh/xxxarizma19-tech/TOO-HUNGRY-MINI-APP@main/site/game.js?v=196'];
+ const sources=['./game.js?v=197','https://cdn.jsdelivr.net/gh/xxxarizma19-tech/TOO-HUNGRY-MINI-APP@main/site/game.js?v=197'];
  window.tooHungryBooted=()=>{started=true;clearTimeout(timeout);status.remove();};
  function load(){
   if(started)return;
