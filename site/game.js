@@ -7,6 +7,11 @@
   const controlHint = document.querySelector('#controlHint');
   const startButton = document.querySelector('#startButton');
   const returnToTitleButton = document.querySelector('#returnToTitleButton');
+  const restartLevelButton = document.createElement('button');
+  restartLevelButton.id = 'restartLevelButton'; restartLevelButton.className = 'secondary-action';
+  restartLevelButton.textContent = 'НАЧАТЬ УРОВЕНЬ ЗАНОВО'; restartLevelButton.hidden = true;
+  returnToTitleButton.after(restartLevelButton);
+  restartLevelButton.onclick = () => startLevel(levelIndex, false);
   const campaignRoute = document.querySelector('#campaignRoute');
   const mobileControls = document.querySelector('#mobileControls');
   const handednessToggle = document.querySelector('#handednessToggle');
@@ -770,6 +775,7 @@
     const albumGreeting = document.querySelector('#albumGreeting'); if (albumGreeting) albumGreeting.hidden = true;
     if (saveTransfer) saveTransfer.hidden = true;
     if (saveTransferHint) saveTransferHint.hidden = true;
+    restartLevelButton.hidden = true;
     if (returnToTitleButton) returnToTitleButton.hidden = true;
     startButton.onclick = action;
     setOverlayVisible(true);
@@ -1058,7 +1064,7 @@
           gameState.runStartLevel = index;
           gameState.runFinished = false;
         }
-        startLevel(index, checkpoint);
+        startLevel(index, false);
       });
       return button;
     }));
@@ -2112,6 +2118,7 @@
     resetGameInput(); saveReturnCheckpoint(); music.pause();
     showOverlay('ПАУЗА', 'Бой остановлен. Продолжишь с того же места. Контрольная точка сохранена отдельно.', 'ПРОДОЛЖИТЬ', resumeGame);
     paused = true;
+    restartLevelButton.hidden = false;
     if (returnToTitleButton) {
       returnToTitleButton.hidden = false; returnToTitleButton.textContent = 'ВЫБРАТЬ УРОВЕНЬ';
       returnToTitleButton.onclick = showTitle;
@@ -2271,7 +2278,7 @@
   }
 
   function bossWarning() {
-    const names = ['КОПЬЯ ИЗ КАРТОШКИ', 'ДОЖДЬ ФРИТЮРА', 'ГОРЯЧЕЕ МАСЛО', 'СЫРНАЯ НИТЬ', 'ПИЦЦА-БУМЕРАНГ', 'ВЕЕР ПЕППЕРОНИ', 'НАГГЕТ-МЕТЕОР', 'ВОЛНА КРОШЕК', 'ХРУСТЯЩАЯ КАРТЕЧЬ', 'ЩУПАЛЬЦЕ ПАСТЫ', 'ЗАЛП ФРИКАДЕЛЕК', 'ЛОВУШКА ИЗ ЛАПШИ', 'КОТЛЕТНЫЙ ОБВАЛ', 'ПЛАМЯ ГРИЛЯ', 'ОГУРЕЧНЫЙ БУМЕРАНГ'];
+    const names = ['КОПЬЯ ИЗ КАРТОШКИ', 'ДОЖДЬ ФРИТЮРА', 'ГОРЯЧЕЕ МАСЛО', 'СЫРНАЯ НИТЬ', 'ПИЦЦА-БУМЕРАНГ', 'ВЕЕР ПЕППЕРОНИ', 'НАГГЕТ-МЕТЕОР', 'ВОЛНА КРОШЕК', 'ХРУСТЯЩАЯ КАРТЕЧЬ', 'ЩУПАЛЬЦЕ ПАСТЫ', 'ЗАЛП ФРИКАДЕЛЕК', 'ЛОВУШКА ИЗ ЛАПШИ', 'КОТЛЕТНЫЙ ОБВАЛ', 'КАТЯЩАЯСЯ БУЛОЧКА', 'ОГУРЕЧНЫЙ БУМЕРАНГ'];
     const index = (levelIndex * 3) + boss.attack - 1;
     return names[index] || 'БЕРЕГИСЬ';
   }
@@ -2331,7 +2338,7 @@
       else [-1, 0, 1].forEach((offset, i) => bossWeapon('noodleTrap', 'rise', x + offset * 92, y, 12, { duration: .7, delay: i * .16, linger: 1, radius: 24, jumpClear: 65, slow: .55 }));
     } else if (key === 'burger') {
       if (boss.attack === 1) [-1, 0, 1].forEach((offset, i) => bossWeapon('patty', 'fall', x + offset * 96, y, 19, { duration: .78, delay: i * .24, radius: 38, linger: .24, jumpClear: 65 }));
-      else if (boss.attack === 2) [0, .3].forEach(delay => bossWeapon('flame', 'line', boss.x - 590, boss.y, 16, { duration: 1.4, delay, radius: 40, depth: 30, jumpClear: 70 }));
+      else if (boss.attack === 2) bossWeapon('bun', 'line', boss.x - 650, boss.aimY ?? boss.y, 15, { duration: 1.7, delay: .25, radius: 30, depth: 24, jumpClear: 45 });
       else [-1, 1].forEach((offset, i) => bossWeapon('pickle', 'boomerang', x - 180, y + offset * 32, 13, { duration: 1.9, delay: i * .28, radius: 25, jumpClear: 60 }));
     }
   }
@@ -2656,6 +2663,7 @@
       saveProgress();
     }
     showOverlay('КАПЛЯ РАСТЕКЛАСЬ', canResume ? 'Выбери, как продолжить: вернуться к последней контрольной точке или начать забег с первой кухни. Новый забег сбросит осколки и способности.' : 'Выбери, как продолжить: повторить этот этап или начать забег с первой кухни. Новый забег сбросит осколки и способности.', canResume ? 'С КОНТРОЛЬНОЙ ТОЧКИ' : 'ПОВТОРИТЬ ЭТАП', () => startLevel(levelIndex, canResume));
+    restartLevelButton.hidden = false;
     if (returnToTitleButton) {
       returnToTitleButton.hidden = false;
       returnToTitleButton.textContent = 'ВЫБРАТЬ УРОВЕНЬ';
@@ -3309,7 +3317,11 @@
     const warm = ctx.createLinearGradient(-20, -24, 15, 22);
     warm.addColorStop(0, '#fff0af'); warm.addColorStop(.38, '#f4b449'); warm.addColorStop(1, '#a84624');
     ctx.strokeStyle = '#5c291b'; ctx.lineWidth = 2.5;
-    if (kind === 'fry') {
+    if (kind === 'bun') {
+      const bread=ctx.createLinearGradient(0,-27,0,25);bread.addColorStop(0,'#ffe39a');bread.addColorStop(.5,'#d88935');bread.addColorStop(1,'#8b431f');ctx.fillStyle=bread;
+      ctx.beginPath();ctx.ellipse(0,0,30,25,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#fff1c3';ctx.lineWidth=3;for(let i=0;i<9;i++){let x=Math.sin(i*4)*22,y=Math.cos(i*3)*17;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+3,y-2);ctx.stroke();}
+    } else if (kind === 'fry') {
       ctx.rotate(.18); ctx.fillStyle = warm;
       ctx.beginPath(); ctx.moveTo(-7,-28); ctx.lineTo(6,-26); ctx.lineTo(8,25); ctx.lineTo(-6,28); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = '#ffe9a6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-2,-21); ctx.lineTo(-1,19); ctx.stroke();
@@ -3399,7 +3411,7 @@
 
   function drawBossWindup() {
     if(!boss?.alive || boss.state!=='tell')return;
-    const kinds={fryKing:['fry','fry','oil'],pizzaSlice:['cheeseThread','pizza','pizza'],nuggetBrute:['nugget','crumb','crumb'],spaghettiMonster:['tentacle','meatball','noodleTrap'],burger:['patty','flame','pickle']};
+    const kinds={fryKing:['fry','fry','oil'],pizzaSlice:['cheeseThread','pizza','pizza'],nuggetBrute:['nugget','crumb','crumb'],spaghettiMonster:['tentacle','meatball','noodleTrap'],burger:['patty','bun','pickle']};
     const kind=kinds[levels[levelIndex].key]?.[boss.attack-1];if(!kind)return;
     const bob=prefersReducedMotion?0:Math.sin(time*9)*4;
     ctx.save();ctx.translate(boss.x-72,boss.y-105+bob);ctx.rotate(prefersReducedMotion?0:Math.sin(time*5)*.15);ctx.globalAlpha=.9;drawBossIngredient(kind,.72);ctx.restore();
