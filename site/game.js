@@ -1995,11 +1995,11 @@
       return;
     }
     if (enemies.some(enemy => enemy.alive)) {
-      if (waveQueue.length && waveKills >= waveReinforcementAt) spawnWaveBatch(4, true);
+      // Let each pair finish before the next enters.
       return;
     }
     if (waveQueue.length) {
-      spawnWaveBatch(4, true);
+      spawnWaveBatch(2, true);
       return;
     }
     if (waveIndex + 1 < stage.waves) {
@@ -2047,7 +2047,7 @@
       const elite = i >= amount - eliteCount;
       waveQueue.push({ x, type: mix[(i + index * 2) % mix.length], elite });
     }
-    spawnWaveBatch(Math.min(6, waveQueue.length), false);
+    spawnWaveBatch(Math.min(2, waveQueue.length), false);
     toast = `ВОЛНА ${index + 1} / ${levels[levelIndex].waves} · ${amount} ПРОТИВНИКОВ`;
     toastTime = 2.1;
     announce(`Волна ${index + 1} из ${levels[levelIndex].waves}. Противников: ${amount}.`);
@@ -2223,11 +2223,11 @@
     }
     boss.phaseFlash = Math.max(0, boss.phaseFlash - dt);
     boss.sweepFlash = Math.max(0,(boss.sweepFlash||0)-dt);
-    boss.timer -= dt * (1 + levelIndex * .10);
+    boss.timer -= dt;
     boss.stun = Math.max(0, boss.stun - dt);
     if (boss.state === 'idle' && boss.timer <= 0) {
-      boss.chainRemaining = boss.phase === 3 ? (levelIndex >= 3 ? 2 : 1) : boss.phase === 2 && levelIndex >= 2 ? 1 : 0;
-      warnBossAttack((boss.phase === 1 ? 1.05 : boss.phase === 2 ? 0.72 : 0.48) + (levelIndex === 0 ? 0.24 : 0), false, boss.chainRemaining > 0);
+      boss.chainRemaining = 0;
+      warnBossAttack((boss.phase === 1 ? 1.25 : boss.phase === 2 ? 1.1 : .95) + (levelIndex === 0 ? 0.24 : 0), false, boss.chainRemaining > 0);
     } else if (boss.state === 'tell' && boss.timer <= 0) {
       boss.state = 'attack';
       boss.attackDuration = boss.phase === 3 ? 0.64 : 0.52;
@@ -2240,11 +2240,11 @@
         toast = `ФИНАЛ СВЯЗКИ · ${bossWarning()}`;
       } else {
         boss.state = 'recover';
-        boss.timer = (boss.phase === 1 ? 1.35 : boss.phase === 2 ? 0.86 : 0.62) + (levelIndex === 0 ? 0.24 : 0);
+        boss.timer = (boss.phase === 1 ? 1.7 : boss.phase === 2 ? 1.5 : 1.3) + (levelIndex === 0 ? 0.24 : 0);
       }
     } else if (boss.state === 'recover' && boss.timer <= 0) {
       boss.state = 'idle';
-        boss.timer = (boss.phase === 1 ? 1.12 : boss.phase === 2 ? 0.72 : 0.5) + (levelIndex === 0 ? 0.2 : 0);
+        boss.timer = (boss.phase === 1 ? 1.3 : boss.phase === 2 ? 1.1 : .95) + (levelIndex === 0 ? 0.2 : 0);
     }
   }
 
@@ -2287,7 +2287,7 @@
 
   function bossWeapon(kind, motion, targetX, targetY, damage, options = {}) {
     const startX = boss.x - 18, startY = boss.y;
-    const h = { bossWeapon: true, type: kind, motion, startX, startY, targetX: clamp(targetX, 42, worldWidth - 42), targetY: clamp(targetY, 382, 477), x: startX, y: startY, height: -42, age: 0, duration: .85, delay: 0, linger: 0, radius: 23, depth: 30, jumpClear: 54, hit: false, damage: Math.round(damage * (1 + levelIndex * .19)), seed: Math.random() * 10, ...options };
+    const h = { bossWeapon: true, type: kind, motion, startX, startY, targetX: clamp(targetX, 42, worldWidth - 42), targetY: clamp(targetY, 382, 477), x: startX, y: startY, height: -42, age: 0, duration: .85, delay: 0, linger: 0, radius: 23, depth: 30, jumpClear: 54, hit: false, damage: Math.round(damage * (1 + levelIndex * .09)), seed: Math.random() * 10, ...options };
     h.life = h.duration + h.delay + h.linger;
     hazards.push(h); return h;
   }
@@ -2296,7 +2296,7 @@
     sound('bossAttack');
     // The same windup also commits a close-range sweep: face-tanking is unsafe.
     boss.sweepFlash = .35;
-    if (Math.abs(player.x-boss.x)<155 && Math.abs(player.y-boss.y)<65 && player.z>-65 && canBeHit()) damagePlayer(18+levelIndex*5,boss.x);
+    if (Math.abs(player.x-boss.x)<155 && Math.abs(player.y-boss.y)<65 && player.z>-65 && canBeHit()) damagePlayer(14+levelIndex*3,boss.x);
     const key = levels[levelIndex].key;
     if (key === 'pizzaSlice' || key === 'spaghettiMonster') sound(boss.attack === 1 ? 'whip' : 'tomatoThrow');
     if (key === 'nuggetBrute') sound('heavy');
@@ -2310,20 +2310,20 @@
         for (let i = 0; i < (frenzy ? 7 : 5); i++) bossWeapon('fry', 'fall', x + (i - (frenzy ? 3 : 2)) * 62, y + Math.sin(i * 2) * 26, 12, { duration: .64, delay: i * .13, linger: .18 });
       } else [-1, 0, 1].forEach((offset, i) => bossWeapon('oil', 'arc', x + offset * 90, y, 11, { duration: .85, delay: i * .12, linger: 1.4, radius: 34, jumpClear: 48 }));
     } else if (key === 'pizzaSlice') {
-      if (boss.attack === 1) bossWeapon('cheeseThread', 'beam', boss.x - 340, y, 19, { duration: .65, delay: .16, radius: 12, depth: 23, jumpClear: 45 });
+      if (boss.attack === 1) bossWeapon('cheeseThread', 'beam', boss.x - 340, y, 19, { duration: .48, delay: .4, radius: 12, depth: 18, jumpClear: 40 });
       else if (boss.attack === 2) bossWeapon('pizza', 'boomerang', x - 170, y, 16, { duration: 1.85, radius: 33, jumpClear: 64 });
       else [-1, 0, 1].forEach((offset, i) => bossWeapon('pizza', 'line', x - 200, y + offset * 54, 12, { duration: 1.12, delay: i * .13, startY: boss.y + offset * 10, radius: 25 }));
     } else if (key === 'nuggetBrute') {
       if (boss.attack === 1) {
-        bossWeapon('nugget', 'fall', x, y, 24, { duration: .68, radius: 45, depth: 35, linger: .35, jumpClear: 65 });
-        [-1, 1].forEach(direction => bossWeapon('crack', 'line', x + direction * 260, y, 12, { startX: x, startY: y, duration: .9, delay: .68, height: 0, radius: 30, jumpClear: 35 }));
+        bossWeapon('nugget', 'fall', x, y, 24, { duration: 1.05, radius: 35, depth: 27, linger: .15, jumpClear: 55 });
+        [-1, 1].forEach(direction => bossWeapon('crack', 'line', x + direction * 260, y, 12, { startX: x, startY: y, duration: 1.15, delay: 1.1, height: 0, radius: 30, jumpClear: 35 }));
       } else if (boss.attack === 2) {
-        [0, .2, .4].forEach(delay => bossWeapon('crack', 'line', boss.x - 540, boss.y, 14, { duration: 1.45, delay, height: 0, radius: 31, depth: 35, jumpClear: 35 }));
+        [0, .48].forEach(delay => bossWeapon('crack', 'line', boss.x - 540, boss.y, 14, { duration: 1.7, delay, height: 0, radius: 25, depth: 35, jumpClear: 35 }));
       } else [-2, -1, 0, 1, 2].forEach((offset, i) => bossWeapon('crumb', 'line', x - 190, y + offset * 33, 10, { duration: .9, delay: i * .06, radius: 15, startY: boss.y + offset * 9 }));
     } else if (key === 'spaghettiMonster') {
       if (boss.attack === 1) bossWeapon('tentacle', 'beam', boss.x - 380, y, 18, { duration: .8, depth: 24, jumpClear: 60, slow: .65 });
       else if (boss.attack === 2) [-1, 0, 1].forEach((offset, i) => bossWeapon('meatball', 'arc', x + offset * 95, y, 15, { duration: 1.05, delay: i * .18, linger: .25, radius: 27 }));
-      else [-1, 0, 1].forEach((offset, i) => bossWeapon('noodleTrap', 'rise', x + offset * 92, y, 12, { duration: .7, delay: i * .16, linger: 1, radius: 24, jumpClear: 95, slow: .85 }));
+      else [-1, 0, 1].forEach((offset, i) => bossWeapon('noodleTrap', 'rise', x + offset * 92, y, 12, { duration: .7, delay: i * .16, linger: 1, radius: 24, jumpClear: 65, slow: .55 }));
     } else if (key === 'burger') {
       if (boss.attack === 1) [-1, 0, 1].forEach((offset, i) => bossWeapon('patty', 'fall', x + offset * 96, y, 19, { duration: .78, delay: i * .24, radius: 38, linger: .24, jumpClear: 65 }));
       else if (boss.attack === 2) [0, .3].forEach(delay => bossWeapon('flame', 'line', boss.x - 590, boss.y, 16, { duration: 1.4, delay, radius: 40, depth: 30, jumpClear: 70 }));
@@ -2356,7 +2356,7 @@
       }
     }
     const requiresLanding = h.type === 'oil' || h.type === 'meatball' || h.type === 'nugget' || h.type === 'patty';
-    const active = !before && (requiresLanding ? landed : h.type === 'noodleTrap' ? p > .55 : h.height > -85);
+    const active = !before && (h.motion !== 'beam' || p < .55) && (requiresLanding ? landed : h.type === 'noodleTrap' ? p > .55 : h.height > -85);
     const beamEnd = h.startX + (h.targetX - h.startX) * clamp(p / .2, 0, 1);
     const inX = h.motion === 'beam' ? player.x >= Math.min(h.startX, beamEnd) - 12 && player.x <= Math.max(h.startX, beamEnd) + 12 : Math.abs(player.x - h.x) < h.radius;
     const hitLane = h.motion === 'beam' ? h.startY + (h.targetY - h.startY) * clamp((player.x - h.startX) / (beamEnd - h.startX || 1), 0, 1) : h.y;
