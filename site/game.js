@@ -1,4 +1,5 @@
 (() => {
+  if(window.tooHungryGameInitialized)return;window.tooHungryGameInitialized=true;
   const canvas = document.querySelector('#game');
   const ctx = canvas.getContext('2d');
   const overlay = document.querySelector('#overlay');
@@ -269,13 +270,20 @@
   }
 
   function requestArt(image) {
-    if (image && !image.src && image.assetSource) {
-      image.onerror = () => { image.assetRetries = (image.assetRetries || 0) + 1;
-        if(image.assetRetries <= 3) setTimeout(()=>{image.src=image.assetSource+'?retry='+image.assetRetries;},600*image.assetRetries);
-      };
-      image.src = image.assetSource;
-    }
-    return image;
+    if (!image || image.assetRequested || !image.assetSource) return image;
+    image.assetRequested=true;image.crossOrigin='anonymous';
+    let attempt=0, timer;
+    const load=()=>{
+      clearTimeout(timer);
+      if(image.naturalWidth>0)return;
+      if(attempt>=4){image.assetRetries=4;return;}
+      image.assetRetries=attempt;
+      const base=attempt%2===0 ? '' : 'https://cdn.jsdelivr.net/gh/xxxarizma19-tech/TOO-HUNGRY-MINI-APP@main/site/';
+      image.src=base+image.assetSource+'?build=196&attempt='+attempt++;
+      timer=setTimeout(load,8000);
+    };
+    image.onload=()=>{clearTimeout(timer);image.assetRetries=0;};
+    image.onerror=()=>{clearTimeout(timer);timer=setTimeout(load,300);};load();return image;
   }
 
   function artReady(images) { return images.every(image => image?.complete && image.naturalWidth > 0); }
@@ -3867,6 +3875,7 @@
   particles = [];
   drops = [];
   damageNumbers = [];
+  window.tooHungryBooted?.();
   showTitle();
   initializeTelegramShell();
   if (saveRecoveredFromBackup) {

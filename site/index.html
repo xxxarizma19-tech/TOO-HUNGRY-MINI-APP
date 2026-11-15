@@ -186,8 +186,26 @@
     <div class="footer"><span>5 этапов · 5 боссов · прогресс сохраняется в браузере</span><button id="handednessToggle" class="handedness-toggle" type="button" aria-pressed="false" aria-label="Атаки справа, движение слева">АТАКА СПРАВА</button><span>XARIZMA19 · ORIGINAL ALBUM</span></div>
   </main>
   <div class="rotate-hint" role="status" aria-live="polite"><span class="rotate-mark" aria-hidden="true">↻</span><span class="rotate-copy"><strong>ПОВЕРНИ ТЕЛЕФОН</strong><small>АРЕНА ШИРЕ В АЛЬБОМНОМ РЕЖИМЕ</small></span></div>
-<script src="telegram-web-app.js"></script>
-<script src="game.js?v=195"></script>
+<div id="bootStatus" role="status" style="position:fixed;z-index:50;inset:0;background:#171113;color:#ffd49b;display:grid;place-content:center;text-align:center;font:700 16px system-ui;padding:24px">Загружаем TOO HUNGRY…</div>
+<script>
+(()=>{
+ const status=document.querySelector('#bootStatus');
+ let started=false,attempt=0,timeout;
+ const sources=['./game.js?v=196','https://cdn.jsdelivr.net/gh/xxxarizma19-tech/TOO-HUNGRY-MINI-APP@main/site/game.js?v=196'];
+ window.tooHungryBooted=()=>{started=true;clearTimeout(timeout);status.remove();};
+ function load(){
+  if(started)return;
+  if(attempt>=sources.length){status.textContent='Не удалось загрузить игру. Нажми сюда, чтобы повторить.';status.onclick=()=>{attempt=0;load()};return;}
+  status.textContent=attempt?'Соединение медленное. Пробуем запасной сервер…':'Загружаем TOO HUNGRY…';
+  const script=document.createElement('script');script.src=sources[attempt++];script.async=true;
+  script.onload=()=>{window.tooHungryBooted();};
+  script.onerror=()=>{clearTimeout(timeout);script.remove();load()};
+  timeout=setTimeout(()=>{script.remove();load()},9000);document.head.append(script);
+ }
+ const sdk=document.createElement('script');sdk.src='./telegram-web-app.js';sdk.async=true;
+ let boot=false;const begin=()=>{if(!boot){boot=true;load()}};sdk.onload=begin;sdk.onerror=begin;document.head.append(sdk);setTimeout(begin,1200);
+})();
+</script>
 <script>
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
